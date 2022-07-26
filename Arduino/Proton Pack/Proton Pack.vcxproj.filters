@@ -17,4 +17,20 @@
   <ItemGroup>
     <None Include="Proton Pack.ino" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="__vm\.Proton Pack.vsarduino.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BGSequence.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GBLEDPatternsJewel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BGSequence.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

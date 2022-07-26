@@ -1,5 +1,11 @@
 // Includes
-#include BGSequence.h
+#include <Adafruit_NeoPixel.h>
+#include <GBLEDPatternsJewel.h>
+
+#include <Adafruit_Soundboard.h>
+#include <SoftwareSerial.h>
+#include <BGSequence.h>
+
 
 /*  ----------------------
 Pin Definitions
