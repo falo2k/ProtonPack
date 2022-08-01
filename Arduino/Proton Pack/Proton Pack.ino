@@ -1,4 +1,5 @@
 // Includes
+#include <TimerEvent.h>
 #include <Adafruit_NeoPixel.h>
 #include <GBLEDPatternsJewel.h>
 
@@ -33,6 +34,14 @@ const int SW_BT_ON = LOW;
 const int SW_ION_PIN = A3;
 const int SW_ION_ON = LOW;
 
+const int SW_ACTIVATE_BIT = 0b0000001;
+const int BTN_INTENSIFY_BIT = 0b0000010;
+const int SW_LOWER_BIT = 0b0000100;
+const int SW_UPPER_BIT = 0b0001000;
+const int BTN_TIP_BIT = 0b0010000;
+const int SW_BT_BIT = 0b0100000;
+const int SW_ION_BIT = 0b1000000;
+
 const int SLD_A_PIN = A7;
 const int SLD_B_PIN = A6;
 const int SLD_LOW = 250;
@@ -43,16 +52,17 @@ const int PACK_LED_PIN = 2;
 const int POWER_CELL_LEDS = 15;
 const int CYCLOTRON_LEDS = 7 * 4;
 const int PACK_LED_LENGTH = POWER_CELL_LEDS + CYCLOTRON_LEDS;
-const int POWER_CELL_RANGE[2] = { 0, POWER_CELL_LEDS };
-const int CYCLOTRON_RANGES[4][2] = { {POWER_CELL_LEDS + 1,POWER_CELL_LEDS + 7},{POWER_CELL_LEDS + 8,POWER_CELL_LEDS + 14},{POWER_CELL_LEDS + 15,POWER_CELL_LEDS + 21},{POWER_CELL_LEDS + 22,POWER_CELL_LEDS + 28} };
+const int POWER_CELL_RANGE[2] = { 0, POWER_CELL_LEDS - 1 };
+// Note that the last index is the central LED
+const int CYCLOTRON_RANGES[4][2] = { {POWER_CELL_LEDS ,POWER_CELL_LEDS + 6},{POWER_CELL_LEDS + 7,POWER_CELL_LEDS + 13},{POWER_CELL_LEDS + 14,POWER_CELL_LEDS + 20},{POWER_CELL_LEDS + 21,POWER_CELL_LEDS + 27} };
 
 const int VENT_LED_PIN = 3;
-const int VENT_LEDS = 4;
-const int WAND_LEDS = 13;
+const int VENT_LEDS = 1;
+const int WAND_LEDS = 0;
 const int VENT_LED_LENGTH = VENT_LEDS + WAND_LEDS;
 // TODO Correct VENT LED Range
-const int VENT_LED_RANGE[2] = { 0,4 };
-const int SLO_BLO_INDEX = 5;
+const int VENT_LED_RANGE[2] = { 0,VENT_LEDS - 1 };
+const int SLO_BLO_INDEX = VENT_LEDS;
 // TODO Remaining light indexes for wand
 
 // Audio FX Board
@@ -126,11 +136,15 @@ bool SFX_PLAYING = false;
 enum PackState { OFF, BOOTING, BOOTED, POWERDOWN };
 enum PackState STATUS;
 
-enum WandState { WANDOFF, ON, ON_PACK };
-enum WandState WANDSTATUS;
 
-enum WandSLEDState { ALLOFF, WANDONLY, NORMAL, FIRING, WARNING, FASTWARNING, VENTSTATE, STREAMCROSS };
-enum WandSLEDState WANDLEDSTATUS;
+/*  ----------------------
+	Timers
+----------------------- */
+TimerEvent powerCellTimer;
+int powerCellPeriod = 10;
+
+TimerEvent cyclotronTimer;
+int cyclotronPeriod = 10;
 
 /*  ----------------------
 	Global Objects
@@ -167,14 +181,6 @@ void setup() {
 	pinMode(SLD_A_PIN, INPUT);
 	pinMode(SLD_B_PIN, INPUT);
 
-	// Initiate neopixels and turn off ASAP
-	wandLights.begin();
-	wandLights.clear();
-	wandLights.show();
-	packLights.begin();
-	packLights.clear();
-	packLights.show();
-
 	#ifdef SFX
 		// Set up Audio FX Serial
 		DEBUG_SERIAL.println("Setting up SFX Board ...");
@@ -204,6 +210,20 @@ void setup() {
 	// Set up Bargraph Serial
 	#endif
 
+	// Initiate neopixels and turn off ASAP
+	wandLights.begin();
+	wandLights.clear();
+	wandLights.show();
+	packLights.begin();
+	packLights.clear();
+	packLights.show();
+
+	// Set up timers
+
+	powerCellInit();
+	powerCellTimer.set(powerCellPeriod, powerCellUpdate);
+	cyclotronInit();
+	cyclotronTimer.set(cyclotronPeriod, cyclotronUpdate);
 }
 
 // Spare looping variables
@@ -238,38 +258,36 @@ void loop() {
 	
 	-------- */
 
-	if (checkInputs()) {
-		char strBuf[256];
-		sprintf(strBuf, "ACTIVATE=%i, INTENSIFY=%i, LOWER=%i, UPPER=%i, TIP=%i, BT=%i, ION=%i, SLDA=%i, SLDB=%i, PLAYING=%i",
-			SW_ACTIVATE, BTN_INTENSIFY, SW_LOWER, SW_UPPER, BTN_TIP, SW_BT, SW_ION, SLD_A, SLD_B, SFX_PLAYING);
-		DEBUG_SERIAL.println(strBuf);
+	bool inputChanged = checkInputs();
+
+	if (inputChanged) {
+		//char strBuf[256];
+		//sprintf(strBuf, "ACTIVATE=%i, INTENSIFY=%i, LOWER=%i, UPPER=%i, TIP=%i, BT=%i, ION=%i, SLDA=%i, SLDB=%i, PLAYING=%i",
+		//	SW_ACTIVATE, BTN_INTENSIFY, SW_LOWER, SW_UPPER, BTN_TIP, SW_BT, SW_ION, SLD_A, SLD_B, SFX_PLAYING);
+		//DEBUG_SERIAL.println(strBuf);
 	}
 
-	#ifdef SFX
-	if (BTN_INTENSIFY) {
-		playTrack(SFX_music_tracks[SLD_A + (3*SLD_B)], true);
-	}
-	#endif
-
-	delay(1);
 	
+	if (BTN_INTENSIFY) {
+		#ifdef SFX
+		playTrack(SFX_music_tracks[SLD_A + (3*SLD_B)], true);
+		#endif
+		powerCellInit();
+	}
+
+	// Run animation routines, and update lights
+	powerCellTimer.update();
+	cyclotronTimer.update();
+
+	packLights.show();
+	wandLights.show();
 }
 
 
-bool checkInputs() {
-	int initialState = 0;
-	bitWrite(initialState, 0, SW_ACTIVATE);
-	bitWrite(initialState, 1, BTN_INTENSIFY);
-	bitWrite(initialState, 2, SW_LOWER);
-	bitWrite(initialState, 3, SW_UPPER);
-	bitWrite(initialState, 4, BTN_TIP);
-	bitWrite(initialState, 5, SW_BT);
-	bitWrite(initialState, 6, SW_ION);
-	bitWrite(initialState, 7, bitRead(SLD_A, 0));
-	bitWrite(initialState, 8, bitRead(SLD_A, 1));
-	bitWrite(initialState, 9, bitRead(SLD_B, 0));
-	bitWrite(initialState, 10, bitRead(SLD_B, 1));
-	bitWrite(initialState, 11, SFX_PLAYING);
+int checkInputs() {
+	//int initialState = SW_ACTIVATE + (BTN_INTENSIFY << 1) + (SW_LOWER << 2) + (SW_UPPER << 3) + (BTN_TIP << 4) + (SW_BT << 5) + (SW_ION << 6);
+	int initialState = ((int)SW_ACTIVATE * SW_ACTIVATE_BIT) + ((int)BTN_INTENSIFY * BTN_INTENSIFY_BIT) + ((int)SW_LOWER * SW_LOWER_BIT) + ((int)SW_UPPER * SW_UPPER_BIT)
+		+ ((int)BTN_TIP * BTN_TIP_BIT) + ((int)SW_BT * SW_BT_BIT) + ((int)SW_ION * SW_ION_BIT);
 
 	SW_ACTIVATE = digitalRead(SW_ACTIVATE_PIN) == SW_ACTIVATE_ON;
 	BTN_INTENSIFY = digitalRead(BTN_INTENSIFY_PIN) == BTN_INTENSIFY_ON;
@@ -285,41 +303,12 @@ bool checkInputs() {
 	int SLD_A_val = analogRead(SLD_A_PIN);
 	int SLD_B_val = analogRead(SLD_B_PIN);
 
-	if (SLD_A_val < SLD_LOW) {
-		SLD_A = 0;
-	}
-	else if (SLD_A_val < SLD_MID) {
-		SLD_A = 1;
-	}
-	else {
-		SLD_A = 2;
-	}
+	SLD_A = (SLD_A_val < SLD_LOW ? 0 : (SLD_A_val < SLD_MID ? 1 : 2));
+	SLD_B = (SLD_B_val < SLD_LOW ? 0 : (SLD_B_val < SLD_MID ? 1 : 2));
 
-	if (SLD_B_val < SLD_LOW) {
-		SLD_B = 0;
-	}
-	else if (SLD_B_val < SLD_MID) {
-		SLD_B = 1;
-	}
-	else {
-		SLD_B = 2;
-	}
+	int newState = SW_ACTIVATE + (BTN_INTENSIFY << 1) + (SW_LOWER << 2) + (SW_UPPER << 3) + (BTN_TIP << 4) + (SW_BT << 5) + (SW_ION << 6);
 
-	int newState = 0;
-	bitWrite(newState, 0, SW_ACTIVATE);
-	bitWrite(newState, 1, BTN_INTENSIFY);
-	bitWrite(newState, 2, SW_LOWER);
-	bitWrite(newState, 3, SW_UPPER);
-	bitWrite(newState, 4, BTN_TIP);
-	bitWrite(newState, 5, SW_BT);
-	bitWrite(newState, 6, SW_ION);
-	bitWrite(newState, 7, bitRead(SLD_A, 0));
-	bitWrite(newState, 8, bitRead(SLD_A, 1));
-	bitWrite(newState, 9, bitRead(SLD_B, 0));
-	bitWrite(newState, 10, bitRead(SLD_B, 1));
-	bitWrite(newState, 11, SFX_PLAYING);
-
-	return initialState != newState;
+	return initialState ^ newState;
 }
 
 bool playTrack(const char* trackName, bool stop) {
@@ -339,4 +328,108 @@ bool playTrack(char* trackName, bool stop) {
 void clearLEDs() {
 	wandLights.clear();
 	packLights.clear();
+}
+
+bool checkMask(int value, int mask) {
+	return (value ^ mask) > 0;
+}
+
+int powerCellLitIndex = 0;
+const int powerCellMinPeriod = 1;
+
+void powerCellInit() {
+
+	// Idle Animation
+	powerCellLitIndex = 0;
+	powerCellPeriod = 450 / POWER_CELL_LEDS;
+	clearPowerCell();
+}
+
+void powerCellUpdate() {
+
+	if (powerCellLitIndex == POWER_CELL_LEDS) {
+		powerCellLitIndex = 0;
+		clearPowerCell();
+	}
+	else {
+		packLights.setPixelColor(powerCellLitIndex, packLights.Color(150, 150, 150, 150));
+		powerCellLitIndex++;
+	}
+
+	powerCellTimer.setPeriod(powerCellPeriod);	
+}
+
+void clearPowerCell() {
+	for (int i = 0; i < POWER_CELL_LEDS; i++) {
+		packLights.setPixelColor(i, 0);
+	}
+}
+
+int cyclotronLitIndex = 0;
+int cyclotronStep = 0;
+int cyclotronFadeInSteps = 15;
+int cyclotronFadeOutSteps = 40;
+int cyclotronSolidSteps = 200;
+const int cyclotronMinPeriod = 1;
+
+uint32_t cyclotronLow = packLights.Color(30,0,0);
+uint32_t cyclotronFull = packLights.Color(175, 0, 0);
+
+void cyclotronInit() {
+
+	// Basic rotation animation
+	cyclotronLitIndex = 0;
+	cyclotronStep = 0;
+	cyclotronPeriod = 450 / cyclotronSolidSteps;
+	//cyclotronPeriod = 450;
+}
+
+void cyclotronUpdate() {
+	
+	for (int i = CYCLOTRON_RANGES[cyclotronLitIndex][0]; i < CYCLOTRON_RANGES[cyclotronLitIndex][1]; i++) {
+		packLights.setPixelColor(i, cyclotronFull);
+	}
+
+	if (cyclotronStep < cyclotronFadeInSteps) {
+		for (int j = CYCLOTRON_RANGES[(cyclotronLitIndex +3) % 4][0]; j < CYCLOTRON_RANGES[(cyclotronLitIndex + 3) % 4][1]; j++) {
+			packLights.setPixelColor(j, colourInterpolate(cyclotronFull, cyclotronLow, cyclotronStep, cyclotronFadeInSteps));
+		}
+	}
+	else if (cyclotronStep == cyclotronFadeInSteps) {
+		for (int j = CYCLOTRON_RANGES[(cyclotronLitIndex + 3) % 4][0]; j < CYCLOTRON_RANGES[(cyclotronLitIndex + 3) % 4][1]; j++) {
+			packLights.setPixelColor(j, 0);
+		}
+	}
+
+	if (cyclotronStep > cyclotronSolidSteps - cyclotronFadeOutSteps) {
+		int interpolateStep = cyclotronStep - (cyclotronSolidSteps - cyclotronFadeOutSteps) - 1;
+		for (int j = CYCLOTRON_RANGES[(cyclotronLitIndex + 1) % 4][0]; j < CYCLOTRON_RANGES[(cyclotronLitIndex + 1) % 4][1]; j++) {
+			packLights.setPixelColor(j, colourInterpolate(cyclotronLow, cyclotronFull, interpolateStep, cyclotronFadeOutSteps));
+		}
+	}
+
+	cyclotronStep++;
+
+	if (cyclotronStep >= cyclotronSolidSteps) {
+		cyclotronStep = 0;		
+		cyclotronLitIndex = (cyclotronLitIndex + 1) % 4;
+	}
+
+	cyclotronTimer.setPeriod(cyclotronPeriod);
+}
+
+void clearCyclotron() {
+	for (int i = POWER_CELL_LEDS; i < POWER_CELL_LEDS + CYCLOTRON_LEDS; i++) {
+		packLights.setPixelColor(i, 0);
+	}
+}
+
+uint32_t colourInterpolate(uint32_t c1, uint32_t c2, int step, int totalSteps) {
+	uint8_t c1w = (uint8_t)(c1 >> 24), c1r = (uint8_t)(c1 >> 16), c1g = (uint8_t)(c1 >> 8), c1b = (uint8_t)c1;
+	uint8_t c2w = (uint8_t)(c2 >> 24), c2r = (uint8_t)(c2 >> 16), c2g = (uint8_t)(c2 >> 8), c2b = (uint8_t)c2;
+
+	return packLights.Color((c1r * (totalSteps - step) + c2r * step) / totalSteps, 
+		(c1g * (totalSteps - step) + c2g * step) / totalSteps, 
+		(c1b * (totalSteps - step) + c2b * step) / totalSteps,
+		(c1w * (totalSteps - step) + c2w * step) / totalSteps);
 }
