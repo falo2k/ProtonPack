@@ -132,10 +132,10 @@ bool SW_ION = false;
 int SLD_A = 0;
 int SLD_B = 0;
 bool SFX_PLAYING = false;
+bool SFX_PAUSED = false;
 
-enum PackState { OFF, BOOTING, BOOTED, POWERDOWN };
-enum PackState STATUS;
-
+enum State { OFF, WANDON, BOOTING, IDLE, POWERDOWN, FIRING_HEAT, FIRING_NOHEAT, FIRING_OHWARNING, OVERHEAT, FIRING_STOP, MUSIC_MODE };
+enum State STATE;
 
 /*  ----------------------
 	Timers
@@ -218,8 +218,12 @@ void setup() {
 	packLights.clear();
 	packLights.show();
 
-	// Set up timers
+	// Initiate States
+	STATE = OFF;
+	//CYC_STATE = OFF;
+	//PC_STATE = OFF;
 
+	// Set up timers	
 	powerCellInit();
 	powerCellTimer.set(powerCellPeriod, powerCellUpdate);
 	cyclotronInit();
@@ -315,14 +319,29 @@ bool playTrack(const char* trackName, bool stop) {
 	return playTrack((char*)trackName, stop);
 }
 
+bool pauseTrack() {
+	sfx.pause();
+	SFX_PAUSED = true;
+}
+
+bool unPauseTrack() {
+	if (SFX_PAUSED) {
+		sfx.unpause();
+	}
+	SFX_PAUSED = false;
+}
+
 bool playTrack(char* trackName, bool stop) {
-	if (SFX_PLAYING && stop) {
+	if (stop) {
 		sfx.stop();
+		SFX_PLAYING = false;
 	}
 
 	DEBUG_SERIAL.print("Playing track: "); DEBUG_SERIAL.println(trackName);
 
 	sfx.playTrack(trackName);	
+	SFX_PLAYING = true;
+	SFX_PAUSED = false;
 }
 
 void clearLEDs() {
@@ -336,12 +355,13 @@ bool checkMask(int value, int mask) {
 
 int powerCellLitIndex = 0;
 const int powerCellMinPeriod = 1;
+const int powerCellIdlePeriod = 1000;
 
 void powerCellInit() {
 
 	// Idle Animation
 	powerCellLitIndex = 0;
-	powerCellPeriod = 450 / POWER_CELL_LEDS;
+	powerCellPeriod = powerCellIdlePeriod / POWER_CELL_LEDS;
 	clearPowerCell();
 }
 
@@ -367,12 +387,13 @@ void clearPowerCell() {
 
 int cyclotronLitIndex = 0;
 int cyclotronStep = 0;
-int cyclotronFadeInSteps = 15;
-int cyclotronFadeOutSteps = 40;
+int cyclotronFadeInSteps = 5;
+int cyclotronFadeOutSteps = 30;
 int cyclotronSolidSteps = 200;
 const int cyclotronMinPeriod = 1;
+const int cyclotronIdlePeriod = 1000;
 
-uint32_t cyclotronLow = packLights.Color(30,0,0);
+uint32_t cyclotronLow = packLights.Color(5,0,0);
 uint32_t cyclotronFull = packLights.Color(175, 0, 0);
 
 void cyclotronInit() {
@@ -380,8 +401,7 @@ void cyclotronInit() {
 	// Basic rotation animation
 	cyclotronLitIndex = 0;
 	cyclotronStep = 0;
-	cyclotronPeriod = 450 / cyclotronSolidSteps;
-	//cyclotronPeriod = 450;
+	cyclotronPeriod = cyclotronIdlePeriod / cyclotronSolidSteps;
 }
 
 void cyclotronUpdate() {
@@ -390,21 +410,21 @@ void cyclotronUpdate() {
 		packLights.setPixelColor(i, cyclotronFull);
 	}
 
-	if (cyclotronStep < cyclotronFadeInSteps) {
+	if (cyclotronStep < cyclotronFadeOutSteps) {
 		for (int j = CYCLOTRON_RANGES[(cyclotronLitIndex +3) % 4][0]; j < CYCLOTRON_RANGES[(cyclotronLitIndex + 3) % 4][1]; j++) {
-			packLights.setPixelColor(j, colourInterpolate(cyclotronFull, cyclotronLow, cyclotronStep, cyclotronFadeInSteps));
+			packLights.setPixelColor(j, colourInterpolate(cyclotronFull, cyclotronLow, cyclotronStep, cyclotronFadeOutSteps));
 		}
 	}
-	else if (cyclotronStep == cyclotronFadeInSteps) {
+	else if (cyclotronStep == cyclotronFadeOutSteps) {
 		for (int j = CYCLOTRON_RANGES[(cyclotronLitIndex + 3) % 4][0]; j < CYCLOTRON_RANGES[(cyclotronLitIndex + 3) % 4][1]; j++) {
 			packLights.setPixelColor(j, 0);
 		}
 	}
 
-	if (cyclotronStep > cyclotronSolidSteps - cyclotronFadeOutSteps) {
-		int interpolateStep = cyclotronStep - (cyclotronSolidSteps - cyclotronFadeOutSteps) - 1;
+	if (cyclotronStep > cyclotronSolidSteps - cyclotronFadeInSteps) {
+		int interpolateStep = cyclotronStep - (cyclotronSolidSteps - cyclotronFadeInSteps) - 1;
 		for (int j = CYCLOTRON_RANGES[(cyclotronLitIndex + 1) % 4][0]; j < CYCLOTRON_RANGES[(cyclotronLitIndex + 1) % 4][1]; j++) {
-			packLights.setPixelColor(j, colourInterpolate(cyclotronLow, cyclotronFull, interpolateStep, cyclotronFadeOutSteps));
+			packLights.setPixelColor(j, colourInterpolate(cyclotronLow, cyclotronFull, interpolateStep, cyclotronFadeInSteps));
 		}
 	}
 
@@ -428,8 +448,8 @@ uint32_t colourInterpolate(uint32_t c1, uint32_t c2, int step, int totalSteps) {
 	uint8_t c1w = (uint8_t)(c1 >> 24), c1r = (uint8_t)(c1 >> 16), c1g = (uint8_t)(c1 >> 8), c1b = (uint8_t)c1;
 	uint8_t c2w = (uint8_t)(c2 >> 24), c2r = (uint8_t)(c2 >> 16), c2g = (uint8_t)(c2 >> 8), c2b = (uint8_t)c2;
 
-	return packLights.Color((c1r * (totalSteps - step) + c2r * step) / totalSteps, 
+	return packLights.gamma32(packLights.Color((c1r * (totalSteps - step) + c2r * step) / totalSteps, 
 		(c1g * (totalSteps - step) + c2g * step) / totalSteps, 
 		(c1b * (totalSteps - step) + c2b * step) / totalSteps,
-		(c1w * (totalSteps - step) + c2w * step) / totalSteps);
+		(c1w * (totalSteps - step) + c2w * step) / totalSteps));
 }
