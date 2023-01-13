@@ -1,0 +1,6 @@
+*.*
+!.gitignore
+!*.ino
+!*.cpp
+!*.h
+__vm
