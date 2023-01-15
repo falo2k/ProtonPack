@@ -135,7 +135,6 @@ bool SFX_PLAYING = false;
 bool SFX_PAUSED = false;
 
 enum State { OFF, WANDON, BOOTING, IDLE, POWERDOWN, FIRING_HEAT, FIRING_NOHEAT, FIRING_OHWARNING, OVERHEAT, FIRING_STOP, MUSIC_MODE };
-enum State STATE;
 
 /*  ----------------------
 	Timers
