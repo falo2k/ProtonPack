@@ -1,4 +1,4 @@
-/*
+﻿/*
  This sketch is designed to run on a Teensy LC in the wand of the proton pack.
 */
 
@@ -18,7 +18,7 @@
 enum BarGraphSequences { START, ACTIVE, FIRE1, FIRE2, BGVENT };
 BarGraphSequences BGMODE;
 
-enum displayStates {DISPLAY_OFF, VOLUME, TRACK, VENTMODE, BUTTONSTATE, BOOT_LOGO};
+enum displayStates {DISPLAY_OFF, VOLUME, TRACK, VENTMODE, INPUTSTATE, BOOT_LOGO};
 displayStates displayState;
 
 State state = OFF;
@@ -29,27 +29,26 @@ State state = OFF;
 ----------------------- */
 // Switches
 const int SW_ACTIVATE_PIN = 3;
-const int SW_ACTIVATE_ON = LOW;
+const int SW_ACTIVATE_ON = HIGH;
 const int BTN_INTENSIFY_PIN = 2;
 const int BTN_INTENSIFY_ON = LOW;
 const int SW_LOWER_PIN = 5;
-const int SW_LOWER_ON = LOW;
+const int SW_LOWER_ON = HIGH;
 const int SW_UPPER_PIN = 4;
-const int SW_UPPER_ON = LOW;
+const int SW_UPPER_ON = HIGH;
 const int BTN_TIP_PIN = 6;
 const int BTN_TIP_ON = LOW;
-const int ROT_SW_PIN = 7;
+const int ROT_BTN_PIN = 7;
 const int ROT_A_PIN = 8;
 const int ROT_B_PIN = 9;
-const int ROT_SW_ON = LOW;
+const int ROT_BTN_ON = LOW;
 
 const int SW_ACTIVATE_BIT = 0b0000001;
 const int BTN_INTENSIFY_BIT = 0b0000010;
 const int SW_LOWER_BIT = 0b0000100;
 const int SW_UPPER_BIT = 0b0001000;
 const int BTN_TIP_BIT = 0b0010000;
-const int SW_BT_BIT = 0b0100000;
-const int SW_ION_BIT = 0b1000000;
+const int BTN_ROT_BIT = 0b0100000;
 
 // LEDS
 const int BARREL_LED_PIN = 11;
@@ -92,7 +91,7 @@ bool SW_UPPER = false;
 bool BTN_TIP = false;
 bool SW_BT = false;
 bool SW_ION = false;
-bool SW_ROT = false;
+bool BTN_ROT = false;
 int DIR_ROT = 0;
 
 /*  ----------------------
@@ -128,6 +127,17 @@ void setup() {
 	bodyLights.show();
 	tipLights.show();
 
+	// Initiate the input switches
+	// Input switches - Slider Pins Automatically Analogue Read
+	pinMode(SW_ACTIVATE_PIN, INPUT_PULLUP);
+	pinMode(BTN_INTENSIFY_PIN, INPUT_PULLUP);
+	pinMode(SW_LOWER_PIN, INPUT_PULLUP);
+	pinMode(SW_UPPER_PIN, INPUT_PULLUP);
+	pinMode(BTN_TIP_PIN, INPUT_PULLUP);
+	pinMode(ROT_BTN_PIN, INPUT_PULLUP);
+	pinMode(ROT_A_PIN, INPUT_PULLUP);
+	pinMode(ROT_A_PIN, INPUT_PULLUP);
+
 }
 
 void loop() {
@@ -136,8 +146,18 @@ void loop() {
 	// Get any updates from pack
 	// If state change, updated enum, initliaseState()
 
-	stateUpdate(currentMillis);
+	bool inputChanged = checkInputs(currentMillis);
 
+	if (inputChanged) {
+		displayInputs(currentMillis);		
+
+		char strBuf[256];
+		sprintf(strBuf, "ACTIVATE=%i, INTENSIFY=%i, LOWER=%i, UPPER=%i, TIP=%i, ROT=%i",
+			SW_ACTIVATE, BTN_INTENSIFY, SW_LOWER, SW_UPPER, BTN_TIP, BTN_ROT);
+		Serial.println(strBuf);
+	}
+
+	stateUpdate(currentMillis);
 
 	updateLeds(currentMillis);
 	checkDisplayTimeout(currentMillis);
@@ -221,31 +241,37 @@ void displayBoot(unsigned long currentMillis) {
 	displayState = BOOT_LOGO;
 }
 
+void displayInputs(unsigned long currentMillis) {
+	displayState = INPUTSTATE;
+	display.setFixedFont(ssd1306xled_font6x8);
+	display.clear();
+
+	char line[21];
+	sprintf(line, " ACT: %i  INT: %i", SW_ACTIVATE, BTN_INTENSIFY);
+	display.printFixed(0, 0, line, STYLE_BOLD);
+	sprintf(line, " UP:  %i  DWN: %i", SW_UPPER, SW_LOWER);
+	display.printFixed(0, 8, line, STYLE_BOLD);
+	sprintf(line, " TIP: %i  ROT: %i", BTN_TIP, BTN_ROT);
+	display.printFixed(0, 16, line, STYLE_BOLD);
+
+	lastDisplayUpdate = currentMillis;
+}
+
 /*  ----------------------
 	Input Management
 ----------------------- */
 int checkInputs(unsigned long currentMillis) {
 	int initialState = ((int)SW_ACTIVATE * SW_ACTIVATE_BIT) + ((int)BTN_INTENSIFY * BTN_INTENSIFY_BIT) + ((int)SW_LOWER * SW_LOWER_BIT) + ((int)SW_UPPER * SW_UPPER_BIT)
-		+ ((int)BTN_TIP * BTN_TIP_BIT) + ((int)SW_BT * SW_BT_BIT) + ((int)SW_ION * SW_ION_BIT);
+		+ ((int)BTN_TIP * BTN_TIP_BIT) + ((int)BTN_ROT * BTN_ROT_BIT);
 
 	SW_ACTIVATE = digitalRead(SW_ACTIVATE_PIN) == SW_ACTIVATE_ON;
 	BTN_INTENSIFY = digitalRead(BTN_INTENSIFY_PIN) == BTN_INTENSIFY_ON;
 	SW_LOWER = digitalRead(SW_LOWER_PIN) == SW_LOWER_ON;
 	SW_UPPER = digitalRead(SW_UPPER_PIN) == SW_UPPER_ON;
 	BTN_TIP = digitalRead(BTN_TIP_PIN) == BTN_TIP_ON;
+	BTN_ROT = digitalRead(ROT_BTN_PIN) == ROT_BTN_ON;
 
-	SW_BT = digitalRead(SW_BT_PIN) == SW_BT_ON;
-	SW_ION = digitalRead(SW_ION_PIN) == SW_ION_ON;
-
-	SFX_PLAYING = digitalRead(SFX_ACT) == LOW;
-
-	int SLD_A_val = analogRead(SLD_A_PIN);
-	int SLD_B_val = analogRead(SLD_B_PIN);
-
-	SLD_A = (SLD_A_val < SLD_LOW ? 0 : (SLD_A_val < SLD_MID ? 1 : 2));
-	SLD_B = (SLD_B_val < SLD_LOW ? 0 : (SLD_B_val < SLD_MID ? 1 : 2));
-
-	int newState = SW_ACTIVATE + (BTN_INTENSIFY << 1) + (SW_LOWER << 2) + (SW_UPPER << 3) + (BTN_TIP << 4) + (SW_BT << 5) + (SW_ION << 6);
+	int newState = SW_ACTIVATE + (BTN_INTENSIFY << 1) + (SW_LOWER << 2) + (SW_UPPER << 3) + (BTN_TIP << 4) + (BTN_ROT << 5);
 
 	return initialState ^ newState;
 }
