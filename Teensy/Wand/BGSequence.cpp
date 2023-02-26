@@ -330,3 +330,14 @@ void BGSequence::drawBarGraph( uint8_t row, uint8_t col, uint8_t val )
 {
   bargraph.setPixel(row, col, val);
 }
+
+void BGSequence::write()
+{
+    bargraph.write();
+}
+
+void BGSequence::lightBar(int index)
+{
+    drawBarGraph(barGraph[index][0], barGraph[index][1], 1);
+    bargraph.write();
+}

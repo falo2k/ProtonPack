@@ -62,35 +62,66 @@ const bool BGLEDStateFire2[16][28] PROGMEM  = {
    Reindex Bargraph to be able to call segments from 0-27
    The BarGraph is indexed with a 4 x 7 matrix as per the datasheet from BarMeter.com
 */
+// const uint8_t barGraph[28][2]  = {
+//   {0, 0},
+//   {0, 1},
+//   {0, 2},
+//   {0, 3},
+//   {1, 0},
+//   {1, 1},
+//   {1, 2},
+//   {1, 3},
+//   {2, 0},
+//   {2, 1},
+//   {2, 2},
+//   {2, 3},
+//   {3, 0},
+//   {3, 1},
+//   {3, 2},
+//   {3, 3},
+//   {4, 0},
+//   {4, 1},
+//   {4, 2},
+//   {4, 3},
+//   {5, 0},
+//   {5, 1},
+//   {5, 2},
+//   {5, 3},
+//   {6, 0},
+//   {6, 1},
+//   {6, 2},
+//   {6, 3},
+// };
+
 const uint8_t barGraph[28][2]  = {
   {0, 0},
-  {0, 1},
-  {0, 2},
-  {0, 3},
   {1, 0},
-  {1, 1},
-  {1, 2},
-  {1, 3},
   {2, 0},
-  {2, 1},
-  {2, 2},
-  {2, 3},
   {3, 0},
+  {0, 1},
+  {1, 1},
+  {2, 1},
   {3, 1},
+  {0, 2},
+  {1, 2},
+  {2, 2},
   {3, 2},
+  {0, 3},
+  {1, 3},
+  {2, 3},
   {3, 3},
-  {4, 0},
-  {4, 1},
-  {4, 2},
-  {4, 3},
-  {5, 0},
-  {5, 1},
-  {5, 2},
-  {5, 3},
-  {6, 0},
-  {6, 1},
-  {6, 2},
-  {6, 3},
+  {0, 4},
+  {1, 4},
+  {2, 4},
+  {3, 4},
+  {0, 5},
+  {1, 5},
+  {2, 5},
+  {3, 5},
+  {0, 6},
+  {1, 6},
+  {2, 6},
+  {3, 6},
 };
 
 
@@ -114,6 +145,8 @@ class BGSequence  {
     void clearLEDs();
     void sequenceShutdown(unsigned long currentMillis);
     void drawBarGraph( uint8_t row, uint8_t col, uint8_t val );
+    void write();
+    void lightBar(int index);
 
     int IndexSegment;
     unsigned long  IntervalBG = 50;

@@ -10,7 +10,7 @@
 #define DEBUG true
 #define DEBUG_SERIAL if(DEBUG)Serial
 //#define TEST_PIXELS
-#define SFX
+//#define SFX
 //#define BARGRAPH
 
 /*  ----------------------

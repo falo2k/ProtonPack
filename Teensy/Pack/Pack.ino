@@ -31,6 +31,10 @@
 #include <SD.h>
 #include <SerialFlash.h>
 #include <ProtonPackCommon.h>
+#include <Bounce2.h>
+#include <Adafruit_NeoPixel.h>
+
+#include <CmdMessenger.h>
 
 AudioPlaySdWav           playWav1;
 // Use one of these 3 output types: Digital I2S, Digital S/PDIF, or Analog DAC
@@ -62,9 +66,62 @@ AudioControlSGTL5000     sgtl5000_1;
 //const char *tracks[] = {"MUSIC/THEME.WAV", "MUSIC/CLEANIN.WAV" ,"MUSIC/SAVIN.WAV" ,"MUSIC/MAGICCUT.WAV", "MUSIC/RGBTHEME.WAV", "MUSIC/TITLE.WAV", "MUSIC/ONOUROWN.WAV" };
 //int trackCount = 7;
 
+const int PCELL_LED_PIN = 14;
+const int CYCLO_LED_PIN = 16;
+const int VENT_LED_PIN = 17;
+
+const int POWER_CELL_LEDS = 15;
+const int CYCLOTRON_LEDS = 4;
+const int PACK_LED_COUNT = POWER_CELL_LEDS + CYCLOTRON_LEDS;
+const int POWER_CELL_RANGE[2] = { 0, POWER_CELL_LEDS - 1 };
+// Note that the last index is the central LED
+const int CYCLOTRON_RANGES[4][2] = { {POWER_CELL_LEDS ,POWER_CELL_LEDS + 6},{POWER_CELL_LEDS + 7,POWER_CELL_LEDS + 13},{POWER_CELL_LEDS + 14,POWER_CELL_LEDS + 20},{POWER_CELL_LEDS + 21,POWER_CELL_LEDS + 27} };
+const int VENT_LEDS = 1;
+const int WAND_LEDS = 0;
+const int VENT_LED_LENGTH = VENT_LEDS + WAND_LEDS;
+// TODO Correct VENT LED Range
+const int VENT_LED_RANGE[2] = { 0,VENT_LEDS - 1 };
+const int SLO_BLO_INDEX = VENT_LEDS;
+
+Adafruit_NeoPixel pcellLights = Adafruit_NeoPixel(POWER_CELL_LEDS, PCELL_LED_PIN, NEO_GRBW + NEO_KHZ800);
+Adafruit_NeoPixel cycloLights = Adafruit_NeoPixel(CYCLOTRON_LEDS, CYCLO_LED_PIN, NEO_RGB + NEO_KHZ800);
+
+CmdMessenger cmdMessenger = CmdMessenger(Serial1);
+
+bool SW_UPPER = true;
+
+const int ION_SWITCH_PIN = 22;
+const int ROT_SW_PIN = 9;
+const int ROT_ENC_A_PIN = 2;
+const int ROT_ENC_A_PIN = 4;
+
+const int IO_1_PIN = 5;
+const int IO_2_PIN = 3;
+
+
+// 0x4B is the default i2c address
+#define MAX9744_I2CADDR 0x4B
+
+// We'll track the volume level in this variable.
+int8_t thevol = 31;
+
+bool musicMode = false;
+
 void setup() {
     Serial.begin(9600);
+
     Serial1.begin(9600);
+
+    Wire.begin();
+
+    if (!setvolume(thevol)) {
+        Serial.println("Failed to set volume, MAX9744 not found!");
+        // Should loop here until ready - or loop for a small amount of time?
+        // // Error message over serial to display?
+        //while (1);
+    }
+    
+    // Read config file from 
 
     randomSeed(analogRead(A8));
 
@@ -87,15 +144,170 @@ void setup() {
             delay(500);
         }
     }
+
+    pcellLights.begin();
+    cycloLights.begin();
+    pcellLights.clear();
+    cycloLights.clear();
+    pcellLights.show();
+    cycloLights.show();
+
+    for (int i = 0; i <= POWER_CELL_LEDS; i++) {
+        pcellLights.setPixelColor(i, pcellLights.Color(255, 255, 255));
+    }
+    for (int i = 0; i <= CYCLOTRON_LEDS; i++) {
+        cycloLights.setPixelColor(i, pcellLights.Color(255, 255, 255));
+    }
+    pcellLights.show();
+    cycloLights.show();
+
+    Serial.println("Setting up Serial port");
+
+    cmdMessenger.printLfCr();
+    attachCmdMessengerCallbacks();
+    Serial.println("Setup Complete");
+}
+
+void attachCmdMessengerCallbacks() {
+    cmdMessenger.attach(onUnknownCommand);
+    cmdMessenger.attach(eventIntPressed, onButtonPress);
+    cmdMessenger.attach(eventActToggle, onActSwitch);
+    cmdMessenger.attach(eventButtonChange, onSwitchChange);
 }
 
 void loop() {
-    if (!playWav1.isPlaying()) {
+    unsigned long currentMillis = millis();
 
-        playWav1.play(tracks[random(0,6)]);
-        delay(100);
-    }
+    //while (!playWav1.isPlaying()) {
+    //    playRandomTrack();
+    //}
+    /*if (SW_UPPER) {
+        updateLeds(currentMillis);
+    }*/
 
-
+    //Serial.println("Checking Serial");
+    cmdMessenger.feedinSerialData();
 }
 
+/*  ----------------------
+    LED Functions
+----------------------- */
+unsigned long lastLEDCycle = 0;
+unsigned long ledCycleInterval = 10000;
+unsigned long lastLEDUpdate = 0;
+unsigned long ledUpdateRate = 100;
+
+
+void updateLeds(unsigned long currentMillis) {
+
+    if (currentMillis - lastLEDUpdate > ledUpdateRate) {
+        pcellLights.clear();
+
+        float rotation = 2.0 * M_PI * (((float)currentMillis - lastLEDCycle) / ledCycleInterval);
+
+        int sinVal = ((int)floor(((1.0 + sin(rotation)) / 2) * 255));
+        int cosVal = ((int)floor(((1.0 + cos(rotation)) / 2) * 255));
+
+        for (int i = 0; i <= POWER_CELL_LEDS; i++) {
+            pcellLights.setPixelColor(i, pcellLights.Color(sinVal, cosVal, sinVal));
+        }
+
+        pcellLights.show();
+    }
+
+    if (currentMillis - lastLEDCycle > ledCycleInterval) {
+        lastLEDCycle = currentMillis;
+    }    
+}
+
+void playRandomTrack() {
+    if (!musicMode) return;
+
+    if (playWav1.isPlaying()) {
+        playWav1.stop();
+    }
+
+    playWav1.play(trackList[random(0, 6)][0]);
+    delay(100);
+}
+
+void onButtonPress() {
+    bool buttonState = cmdMessenger.readBoolArg();
+
+    Serial.print("Received message: "); Serial.println(buttonState);
+    
+
+    if (buttonState) {
+        playRandomTrack();
+    }
+}
+
+void onActSwitch() {
+    bool buttonState = cmdMessenger.readBoolArg();
+
+    Serial.print("Received message: "); Serial.println(buttonState);
+
+
+    if (buttonState) {
+        musicMode = true;
+        playRandomTrack();
+    }
+    else {
+        musicMode = false;
+        if (playWav1.isPlaying()) {
+            playWav1.stop();
+        }
+    }
+}
+
+void onSwitchChange() {
+    Button button = (Button) cmdMessenger.readInt16Arg();
+    bool value = cmdMessenger.readBoolArg();
+
+    switch (button) {
+    case UPPER:
+        SW_UPPER = value;
+        if (SW_UPPER) {
+            pcellLights.clear();
+            cycloLights.clear();
+            pcellLights.show();
+            cycloLights.show();
+        }
+        else {
+            for (int i = 0; i <= POWER_CELL_LEDS; i++) {
+                pcellLights.setPixelColor(i, pcellLights.Color(255, 255, 255));
+            }
+            for (int i = 0; i <= CYCLOTRON_LEDS; i++) {
+                cycloLights.setPixelColor(i, pcellLights.Color(255, 255, 255));
+            }
+            pcellLights.show();
+            cycloLights.show();
+        }
+        break;
+    default:
+        return;
+    }
+}
+
+// Setting the volume is very simple! Just write the 6-bit
+// volume to the i2c bus. That's it!
+boolean setvolume(int8_t v) {
+    // cant be higher than 63 or lower than 0
+    if (v > 63) v = 63;
+    if (v < 0) v = 0;
+
+    Serial.print("Setting volume to ");
+    Serial.println(v);
+    Wire.beginTransmission(MAX9744_I2CADDR);
+    Wire.write(v);
+    Serial.print("Volume Set");
+    if (Wire.endTransmission() == 0)
+        return true;
+    else
+        return false;
+}
+
+void onUnknownCommand()
+{
+    Serial.println("Command without attached callback");
+}
