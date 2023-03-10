@@ -120,8 +120,8 @@ void setup() {
 	display.setFixedFont(ssd1306xled_font6x8);
 
 	display.begin();	
-	display.getInterface().flipVertical(1);
-	display.getInterface().flipHorizontal(1);
+	//display.getInterface().flipVertical(1);
+	//display.getInterface().flipHorizontal(1);
 	displayBoot(currentMillis);
 
 	// Initiate and clear LEDs
@@ -155,6 +155,8 @@ void setup() {
 	// Set up the bar graph
 	BarGraph.BGSeq();
 	BarGraph.initiateVariables(ACTIVE);
+
+	
 }
 
 

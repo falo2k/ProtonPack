@@ -1,5 +1,8 @@
 #pragma once
 
+#define DEBUG true
+#define DEBUG_SERIAL if(DEBUG)Serial
+
 const char* trackList[][2] = {
 	{"MUSIC/THEME.WAV", "Ghostbusters Theme"}, 
 	{"MUSIC/CLEANIN.WAV", "Cleanin' Up The Town"} ,
@@ -38,4 +41,14 @@ enum SerialCommands {
 	eventActToggle,
 	eventButtonChange,
 	eventUpdateState,
+	increaseVolume,
+	decreaseVolume,
+	eventSetVolume,
+	eventChangeState,
+	eventSaveConfig,
+	eventEnableBluetooth,
+	eventSetTrack,
+	eventPlayTrack,
+	eventPauseTrack,
+	eventStopTrack,
 };
