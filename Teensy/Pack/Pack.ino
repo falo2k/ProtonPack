@@ -73,10 +73,14 @@ const int VENT_LED_COUNT = 3;
     Library objects
 ----------------------- */
 // Audio System
+#define mixerChannel1 0
+#define mixerChannel2 1
+#define mixerAudioInChannel 2
+
 // GUItool: begin automatically generated code
 AudioInputI2S            audioIn;           //xy=303,455
-AudioPlaySdWav           sdFXChannel1;     //xy=326,249
-AudioPlaySdWav           sdFXChannel2; //xy=328,337
+AudioPlaySdWav           sdBackgroundChannel;     //xy=326,249
+AudioPlaySdWav           sdFXChannel; //xy=328,337
 AudioMixer4              audioInMonoMix;         //xy=517,455
 AudioMixer4              audioMixer;         //xy=728,389
 AudioOutputI2S           audioOutput;           //xy=930,414
@@ -84,9 +88,9 @@ AudioAnalyzeRMS          audioRMS;           //xy=913,594
 AudioAnalyzePeak         audioPeak;          //xy=916,517
 AudioConnection          patchCord1(audioIn, 0, audioInMonoMix, 0);
 AudioConnection          patchCord2(audioIn, 1, audioInMonoMix, 1);
-AudioConnection          patchCord3(sdFXChannel1, 0, audioMixer, 0);
-AudioConnection          patchCord4(sdFXChannel2, 0, audioMixer, 1);
-AudioConnection          patchCord5(audioInMonoMix, 0, audioMixer, 2);
+AudioConnection          patchCord3(sdBackgroundChannel, 0, audioMixer, mixerChannel1);
+AudioConnection          patchCord4(sdFXChannel, 0, audioMixer, mixerChannel2);
+AudioConnection          patchCord5(audioInMonoMix, 0, audioMixer, mixerAudioInChannel);
 AudioConnection          patchCord6(audioMixer, 0, audioOutput, 0);
 AudioConnection          patchCord7(audioMixer, audioPeak);
 AudioConnection          patchCord8(audioMixer, audioRMS);
@@ -157,10 +161,19 @@ void setup() {
     // detailed information, see the MemoryAndCpuUsage example
     AudioMemory(16);
     sgtl5000_1.enable();
-    sgtl5000_1.volume(0.6);
+    sgtl5000_1.volume(0.5);
     sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
     sgtl5000_1.unmuteLineout();
     sgtl5000_1.lineOutLevel(21);
+
+    // Ensure the mono-mixer maxes out at 1
+    audioInMonoMix.gain(0, 0.5);
+    audioInMonoMix.gain(1, 0.5);
+
+    // Set up the balance of gains initially for two channel FX/MUSIC
+    audioMixer.gain(mixerChannel1, 0.5);
+    audioMixer.gain(mixerChannel2, 0.5);
+    audioMixer.gain(mixerAudioInChannel, 0.0);
 
     SPI.setMOSI(SDCARD_MOSI_PIN);
     SPI.setSCK(SDCARD_SCK_PIN);
@@ -214,13 +227,13 @@ void loop() {
     checkInputs(currentMillis);
 
     if (ION_SWITCH) {
-        if (!sdFXChannel1.isPlaying()) {
+        if (!sdFXChannel.isPlaying()) {
             //DEBUG_SERIAL.println("Playing Track");
             playRandomTrack();
         }
-    } else if (sdFXChannel1.isPlaying()) {
+    } else if (sdFXChannel.isPlaying()) {
         //DEBUG_SERIAL.println("Stopping Track");
-        sdFXChannel1.stop();
+        sdFXChannel.stop();
     }
     
     //DEBUG_SERIAL.println("Checking Serial");
@@ -331,11 +344,11 @@ uint32_t colourInterpolate(uint32_t c1, uint32_t c2, int step, int totalSteps) {
     Music Functions
 ----------------------- */
 void playRandomTrack() {
-    if (sdFXChannel1.isPlaying()) {
-        sdFXChannel1.stop();
+    if (sdFXChannel.isPlaying()) {
+        sdFXChannel.stop();
     }
 
-    sdFXChannel1.play(trackList[random(0, 6)][0]);
+    sdFXChannel.play(trackList[random(0, 6)][0]);
     delay(10);
 }
 
@@ -350,6 +363,8 @@ void onSwitchChange() {
         return;
     }
 }
+
+
 
 void onUnknownCommand()
 {
