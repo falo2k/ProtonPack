@@ -397,7 +397,7 @@ boolean setvolume(int8_t v) {
 int powerCellLitIndex = 0;
 const int powerCellMinPeriod = 1;
 const int powerCellIdlePeriod = 1000;
-uint32_t pCellColour = pcellLights.Color(150, 150, 150, 150);
+uint32_t pCellColour = pcellLights.Color(150, 150, 150);
 
 void pcellInit() {
     // Idle Animation

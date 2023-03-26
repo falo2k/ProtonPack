@@ -2,29 +2,31 @@
  This sketch is designed to run on a Teensy LC in the wand of the proton pack.
 */
 
-#include <Bounce2.h>
 #include <Encoder.h>
+#include <avdweb_Switch.h>
+
 #include <TimerEvent.h>
+
 #include <lcdgfx.h>
 #include <lcdgfx_gui.h>
 #include <nano_engine_v2.h>
 #include <nano_gfx_types.h>
+
 #include "BGSequence.h"
 #include <Adafruit_NeoPixel.h>
-#include <ProtonPackCommon.h>
-
 #include <CmdMessenger.h>
 
+#include <ProtonPackCommon.h>
+
 /*  ----------------------
-	Enums for state control 
+	Variables to flip switch directions depending on
+	your wiring implementation
 ----------------------- */
-enum BarGraphSequences { START, ACTIVE, FIRE1, FIRE2, BGVENT };
-BarGraphSequences BGMODE;
-
-enum displayStates {DISPLAY_OFF, VOLUME, TRACK, VENTMODE, INPUTSTATE, BOOT_LOGO};
-displayStates displayState;
-
-State state = OFF;
+// Use this to flip the rotary switch direction in code
+int rotaryDirection = -1;
+const bool SW_ACTIVATE_INVERT = false;
+const bool SW_LOWER_INVERT = false;
+const bool SW_UPPER_INVERT = false;
 
 /*  ----------------------
 	Pin & Range Definitions
@@ -32,26 +34,13 @@ State state = OFF;
 ----------------------- */
 // Switches
 const int SW_ACTIVATE_PIN = A3;
-const int SW_ACTIVATE_ON = HIGH;
 const int BTN_INTENSIFY_PIN = A2;
-const int BTN_INTENSIFY_ON = LOW;
 const int SW_LOWER_PIN = A0;
-const int SW_LOWER_ON = HIGH;
 const int SW_UPPER_PIN = A6;
-const int SW_UPPER_ON = HIGH;
 const int BTN_TIP_PIN = 2;
-const int BTN_TIP_ON = LOW;
 const int ROT_BTN_PIN = 3;
 const int ROT_A_PIN = 5;
 const int ROT_B_PIN = 6;
-const int ROT_BTN_ON = LOW;
-
-const int SW_ACTIVATE_BIT = 0b0000001;
-const int BTN_INTENSIFY_BIT = 0b0000010;
-const int SW_LOWER_BIT = 0b0000100;
-const int SW_UPPER_BIT = 0b0001000;
-const int BTN_TIP_BIT = 0b0010000;
-const int BTN_ROT_BIT = 0b0100000;
 
 // LEDS
 const int BARREL_LED_PIN = A8;
@@ -60,11 +49,25 @@ const int TIP_LED_PIN = A9;
 const int TIP_LED_COUNT = 1;
 const int BODY_LED_PIN = A7;
 const int BODY_LED_COUNT = 5;
-const int SLO_BOW_INDEX = 0;
+const int SLO_BLO_INDEX = 0;
 const int VENT_INDEX = 1;
 const int FRONT_INDEX = 2;
 const int TOP1_INDEX = 3;
 const int TOP2_INDEX = 4;
+
+/*  ----------------------
+	State control
+----------------------- */
+enum BarGraphSequences { START, ACTIVE, FIRE1, FIRE2, BGVENT };
+BarGraphSequences BGMODE;
+
+enum displayStates { DISPLAY_OFF, VOLUME, TRACK, VENTMODE, INPUTSTATE, BOOT_LOGO, SAVE_SETTINGS };
+displayStates displayState;
+
+State state = OFF;
+
+bool overheatMode = false;
+int trackNumber = defaultTrack;
 
 /*  ----------------------
 	Library objects
@@ -87,20 +90,24 @@ bool first = true;
 // Serial Command Controller - Use hardware serial port
 CmdMessenger cmdMessenger = CmdMessenger(Serial1);
 
-/*  ----------------------
-	State
------------------------ */
-bool SW_ACTIVATE = false;
-bool BTN_INTENSIFY = false;
-bool SW_LOWER = false;
-bool SW_UPPER = false;
-bool BTN_TIP = false;
-bool SW_BT = false;
-bool SW_ION = false;
-bool BTN_ROT = false;
-int DIR_ROT = 0;
 Encoder ROTARY(ROT_A_PIN, ROT_B_PIN);
-int lastRotaryPosition = 0;
+
+Switch actSwitch = Switch(SW_ACTIVATE_PIN);
+Switch intButton = Switch(BTN_INTENSIFY_PIN);
+Switch lowerSwitch = Switch(SW_LOWER_PIN);
+Switch upperSwitch = Switch(SW_UPPER_PIN);
+Switch tipButton = Switch(BTN_TIP_PIN);
+Switch encoderButton = Switch(ROT_BTN_PIN);
+
+/*  ----------------------
+	Timers
+----------------------- */
+TimerEvent bodyTimer;
+int bodyPeriod = 100;
+TimerEvent tipTimer;
+int tipPeriod = 100;
+TimerEvent barrelTimer;
+int barrelPeriod = 100;
 
 /*  ----------------------
 	Setup and Loops
@@ -108,27 +115,26 @@ int lastRotaryPosition = 0;
 void setup() {
 	unsigned long currentMillis = millis();
 
+	// Initialise Serial for Debug + Pack Connection
 	Serial.begin(9600);
-
 	Serial1.begin(9600);
 
-	//while (!Serial) {
-	//	delay(10);
-	//}
+	DEBUG_SERIAL.println("Starting Setup");
 
 	// Initialise the display
 	display.setFixedFont(ssd1306xled_font6x8);
-
-	display.begin();	
-	//display.getInterface().flipVertical(1);
-	//display.getInterface().flipHorizontal(1);
+	display.begin();
 	displayBoot(currentMillis);
 
-	// Initiate and clear LEDs
+	// Initialise the pack serial
+	cmdMessenger.printLfCr();
+	attachCmdMessengerCallbacks();
+
+	// Initialise LEDs and Timers
 	barrelLights.begin();
 	tipLights.begin();
 	bodyLights.begin();
-	delay(250);
+	//delay(250);
 	
 	tipLights.clear();
 	bodyLights.clear();
@@ -138,27 +144,23 @@ void setup() {
 	bodyLights.show();
 	tipLights.show();
 
+	bodyInit(currentMillis);
+	bodyTimer.set(bodyPeriod, bodyUpdate);
+	barrelInit(currentMillis);
+	barrelTimer.set(barrelPeriod, barrelUpdate);
+	tipInit(currentMillis);
+	tipTimer.set(tipPeriod, tipUpdate);
+
 	// Initiate the input switches
-	// Input switches - Slider Pins Automatically Analogue Read
-	pinMode(SW_ACTIVATE_PIN, INPUT_PULLUP);
-	pinMode(BTN_INTENSIFY_PIN, INPUT_PULLUP);
-	pinMode(SW_LOWER_PIN, INPUT_PULLUP);
-	pinMode(SW_UPPER_PIN, INPUT_PULLUP);
-	pinMode(BTN_TIP_PIN, INPUT_PULLUP);
-	pinMode(ROT_BTN_PIN, INPUT_PULLUP);
-	//pinMode(ROT_A_PIN, INPUT_PULLUP);
-	//pinMode(ROT_B_PIN, INPUT_PULLUP);	
-
-	cmdMessenger.printLfCr();
-	attachCmdMessengerCallbacks();
-
-	// Set up the bar graph
-	BarGraph.BGSeq();
-	BarGraph.initiateVariables(ACTIVE);
-
+	setupInputs();
 	
-}
+	// Set up the bar graph
+	graphInit(currentMillis);
 
+	DEBUG_SERIAL.println("Setup Complete");
+	display.clear();
+	displayState = DISPLAY_OFF;
+}
 
 int currentBGIndex = 0;
 long lastBGUpdate = 0;
@@ -170,125 +172,20 @@ void loop() {
 	// Get any updates from pack
 	cmdMessenger.feedinSerialData();
 
-	// If state change, updated enum, initliaseState()
+	// Process Switch Updates
+	updateInputs(currentMillis);
 
-	bool inputChanged = checkInputs(currentMillis);
-
-	if (inputChanged) {
-		displayInputs(currentMillis);
-		if (BTN_INTENSIFY) {
-			Serial.println("Sending Intensify Message");
-			cmdMessenger.sendCmd(eventIntPressed, BTN_INTENSIFY);
-		}
-
-		cmdMessenger.sendCmd(eventActToggle, SW_ACTIVATE);
-
-		cmdMessenger.sendCmdStart(eventButtonChange);
-		cmdMessenger.sendCmdArg<int16_t>(UPPER);
-		cmdMessenger.sendCmdArg(SW_UPPER);
-		cmdMessenger.sendCmdEnd();
-		cmdMessenger.sendCmdStart(eventButtonChange);
-		cmdMessenger.sendCmdArg<int16_t>(LOWER);
-		cmdMessenger.sendCmdArg(SW_LOWER);
-		cmdMessenger.sendCmdEnd();
-
-	}
-
+	// Process State Updates
 	stateUpdate(currentMillis);
 
-	if (SW_LOWER) {
-		updateLeds(currentMillis);
-	}
-	else {
-		barrelLights.clear();
-		bodyLights.clear();
-		tipLights.clear();
-		barrelLights.show();
-		bodyLights.show();
-		tipLights.show();
-	}
-
+	// Process Display Updates
 	checkDisplayTimeout(currentMillis);
 
-	//BarGraph.sequencePackOn(currentMillis);
-	if (currentMillis - lastBGUpdate > bgInterval) {
-		BarGraph.clearLEDs();
-		BarGraph.lightBar(currentBGIndex);
-
-		currentBGIndex = (currentBGIndex + 1) % 28;
-
-		lastBGUpdate = currentMillis;
-
-	}
-
-}
-
-
-/*  ----------------------
-	LED Functions
------------------------ */
-unsigned long lastLEDUpdate = 0;
-unsigned long ledCycleInterval = 10000;
-int currentBarrel = BARREL_LED_COUNT;
-int currentBody = BODY_LED_COUNT;
-int currentTip = TIP_LED_COUNT;
-
-void updateLeds(unsigned long currentMillis) {
-
-	if (1) { //currentMillis - lastLEDUpdate > interval) {
-		currentBarrel = (currentBarrel + 1) % (BARREL_LED_COUNT + 1);
-		currentBody = (currentBody + 1) % (BODY_LED_COUNT + 1);
-		currentTip = (currentTip + 1) % (TIP_LED_COUNT + 1);
-
-		barrelLights.clear();
-		bodyLights.clear();
-		tipLights.clear();
-
-		float rotation = 2.0 * M_PI * (((float)currentMillis - lastLEDUpdate) / ledCycleInterval);
-		//Serial.println(rotation);
-
-		int sinVal = ((int)floor(((1.0 + sin(rotation)) / 2) * 255));
-		int cosVal = ((int)floor(((1.0 + cos(rotation)) / 2) * 255));
-
-		for (int i = 0; i <= BARREL_LED_COUNT; i++) {
-			//if (i == currentBarrel && i < BARREL_LED_COUNT)	barrelLights.setPixelColor(i, barrelLights.Color(10, 0, 0, 0));
-			barrelLights.setPixelColor(i, barrelLights.Color(sinVal,cosVal,sinVal));
-		}
-
-		for (int i = 0; i <= BODY_LED_COUNT; i++) {
-			//if (i == currentBody && i < BODY_LED_COUNT)	bodyLights.setPixelColor(i, bodyLights.Color(0, 0, 10, 0));
-			bodyLights.setPixelColor(i, barrelLights.Color(sinVal, cosVal, sinVal));
-		}
-
-		for (int i = 0; i <= TIP_LED_COUNT; i++) {
-			//if (i == currentTip && i < TIP_LED_COUNT)	tipLights.setPixelColor(i, tipLights.Color(0, 10, 0, 0));
-			tipLights.setPixelColor(i, barrelLights.Color(sinVal, cosVal, sinVal));
-		}
-
-		if (currentMillis - lastLEDUpdate > ledCycleInterval) {
-			lastLEDUpdate = currentMillis;
-		}
-
-		//lastLEDUpdate = currentMillis;
-
-		barrelLights.show();
-		tipLights.show();
-		bodyLights.show();
-	}	
-
-
-
-}
-
-/*  ----------------------
-	LED Functions
------------------------ */
-void checkDisplayTimeout(unsigned long currentMillis) {
-	if (currentMillis - lastDisplayUpdate > displayIdleTimeout) {
-		display.clear();
-		lastDisplayUpdate = currentMillis;
-		displayState = DISPLAY_OFF;
-	}
+	// Process LED Updates
+	bodyTimer.update();
+	barrelTimer.update();
+	tipTimer.update();
+	graphUpdate(currentMillis);
 }
 
 /*  ----------------------
@@ -306,6 +203,14 @@ void checkDisplayTimeout(unsigned long currentMillis) {
 //	display.invertColors();
 //}
 
+void checkDisplayTimeout(unsigned long currentMillis) {
+	if (currentMillis - lastDisplayUpdate > displayIdleTimeout) {
+		display.clear();
+		lastDisplayUpdate = currentMillis;
+		displayState = DISPLAY_OFF;
+	}
+}
+
 void displayBoot(unsigned long currentMillis) {
 	display.setFixedFont(ssd1306xled_font8x16);
 	display.clear();
@@ -316,85 +221,120 @@ void displayBoot(unsigned long currentMillis) {
 	displayState = BOOT_LOGO;
 }
 
-void displayInputs(unsigned long currentMillis) {
-	displayState = INPUTSTATE;
-	display.setFixedFont(ssd1306xled_font6x8);
-	display.clear();
-
-	char line[21];
-	sprintf(line, " ACT: %i  INT: %i", SW_ACTIVATE, BTN_INTENSIFY);
-	display.printFixed(0, 0, line, STYLE_BOLD);
-	sprintf(line, " UP:  %i  DWN: %i", SW_UPPER, SW_LOWER);
-	display.printFixed(0, 8, line, STYLE_BOLD);
-	sprintf(line, " TIP: %i  ROT: %i", BTN_TIP, BTN_ROT);
-	display.printFixed(0, 16, line, STYLE_BOLD);
-	sprintf(line, " DIR: %i", DIR_ROT);
-	display.printFixed(0, 24, line, STYLE_BOLD);
-
-	/*char strBuf[256];
-	sprintf(strBuf, "ACTIVATE = %i, INTENSIFY = %i, LOWER = %i, UPPER = %i, TIP = %i, ROT = %i, DIR = %i, POS = %i",
-		SW_ACTIVATE, BTN_INTENSIFY, SW_LOWER, SW_UPPER, BTN_TIP, BTN_ROT, DIR_ROT, lastRotaryPosition);
-	Serial.println(strBuf);*/
-
-	lastDisplayUpdate = currentMillis;
-}
+//void displayInputs(unsigned long currentMillis) {
+//	displayState = INPUTSTATE;
+//	display.setFixedFont(ssd1306xled_font6x8);
+//	display.clear();
+//
+//	char line[21];
+//	sprintf(line, " ACT: %i  INT: %i", SW_ACTIVATE, BTN_INTENSIFY);
+//	display.printFixed(0, 0, line, STYLE_BOLD);
+//	sprintf(line, " UP:  %i  DWN: %i", SW_UPPER, SW_LOWER);
+//	display.printFixed(0, 8, line, STYLE_BOLD);
+//	sprintf(line, " TIP: %i  ROT: %i", BTN_TIP, BTN_ROT);
+//	display.printFixed(0, 16, line, STYLE_BOLD);
+//	sprintf(line, " DIR: %i  VAL: %i", DIR_ROT, round(0.25 * lastRotaryPosition));
+//	display.printFixed(0, 24, line, STYLE_BOLD);
+//
+//
+//	/*char strBuf[256];
+//	sprintf(strBuf, "ACTIVATE = %i, INTENSIFY = %i, LOWER = %i, UPPER = %i, TIP = %i, ROT = %i, DIR = %i, POS = %i",
+//		SW_ACTIVATE, BTN_INTENSIFY, SW_LOWER, SW_UPPER, BTN_TIP, BTN_ROT, DIR_ROT, lastRotaryPosition);
+//	Serial.println(strBuf);*/
+//
+//	lastDisplayUpdate = currentMillis;
+//}
 
 /*  ----------------------
 	Input Management
 ----------------------- */
-int checkInputs(unsigned long currentMillis) {
-	int initialState = ((int)SW_ACTIVATE * SW_ACTIVATE_BIT) + ((int)BTN_INTENSIFY * BTN_INTENSIFY_BIT) + ((int)SW_LOWER * SW_LOWER_BIT) + ((int)SW_UPPER * SW_UPPER_BIT)
-		+ ((int)BTN_TIP * BTN_TIP_BIT) + ((int)BTN_ROT * BTN_ROT_BIT);
-
-	bool change = false;
-
-	SW_ACTIVATE = digitalRead(SW_ACTIVATE_PIN) == SW_ACTIVATE_ON;
-	BTN_INTENSIFY = digitalRead(BTN_INTENSIFY_PIN) == BTN_INTENSIFY_ON;
-	SW_LOWER = digitalRead(SW_LOWER_PIN) == SW_LOWER_ON;
-	SW_UPPER = digitalRead(SW_UPPER_PIN) == SW_UPPER_ON;
-	BTN_TIP = digitalRead(BTN_TIP_PIN) == BTN_TIP_ON;
-	BTN_ROT = digitalRead(ROT_BTN_PIN) == ROT_BTN_ON;
-
-	int rotaryPosition = ROTARY.read();
-	if (rotaryPosition != lastRotaryPosition) {
-		// Ignore noisy single steps
-		if (abs(rotaryPosition - lastRotaryPosition) > 1) {
-
-			DIR_ROT = (rotaryPosition < lastRotaryPosition) ? -1 : 1;
-
-			lastRotaryPosition = rotaryPosition;
-
-			if (abs(lastRotaryPosition > 10000)) {
-				lastRotaryPosition = 0;
-				ROTARY.write(0);
-			}
-
-			change = true;
-		}
-	}
-	else {
-		if (DIR_ROT != 0) {
-			change = true;
-		}
-
-		DIR_ROT = 0;
-	}
-
-	int newState = SW_ACTIVATE + (BTN_INTENSIFY << 1) + (SW_LOWER << 2) + (SW_UPPER << 3) + (BTN_TIP << 4) + (BTN_ROT << 5);
-
-	change |= (initialState ^ newState);
-
-	if (change) {
-		displayInputs(currentMillis);
-	}
-
-	return initialState ^ newState;
+void setupInputs() {
+	actSwitch.setPushedCallback(&actSwitchToggle);
+	actSwitch.setReleasedCallback(&actSwitchToggle);
+	lowerSwitch.setPushedCallback(&lowerSwitchToggle);
+	lowerSwitch.setReleasedCallback(&lowerSwitchToggle);
+	upperSwitch.setPushedCallback(&upperSwitchToggle);
+	upperSwitch.setReleasedCallback(&upperSwitchToggle);
+	intButton.setPushedCallback(&intButtonPress);
+	intButton.setReleasedCallback(&intButtonRelease);
+	tipButton.setPushedCallback(&tipButtonPress);
+	tipButton.setReleasedCallback(&tipButtonRelease);
+	encoderButton.setPushedCallback(&rotaryButtonPress);
+	encoderButton.setReleasedCallback(&rotaryButtonRelease);
+	encoderButton.setLongPressCallback(&rotaryButtonLongPress);
 }
+
+int lastRotaryPosition = 0;
+void updateInputs(unsigned long currentMillis) {
+	// Handle Switches
+	actSwitch.poll();
+	intButton.poll();
+	lowerSwitch.poll();
+	upperSwitch.poll();
+	tipButton.poll();
+	encoderButton.poll();
+
+	// Handle Rotary Encoder Movements
+	// TODO: Rotary Encoder
+	int newRotaryPosition = ROTARY.read();
+	if (abs(newRotaryPosition - lastRotaryPosition) >= 4) {
+		int movement = rotaryDirection * round(0.25 * (newRotaryPosition - lastRotaryPosition));
+		DEBUG_SERIAL.print("Rotary Movement: "); DEBUG_SERIAL.println(movement);
+		lastRotaryPosition = newRotaryPosition;
+	}
+}
+
+void actSwitchToggle(void* ref) {
+	DEBUG_SERIAL.print("ACT Switch: "); DEBUG_SERIAL.println(actSwitch.on() ^ SW_ACTIVATE_INVERT);
+}
+
+void lowerSwitchToggle(void* ref) {
+	DEBUG_SERIAL.print("LOWER Switch: "); DEBUG_SERIAL.println(lowerSwitch.on() ^ SW_LOWER_INVERT);
+}
+
+void upperSwitchToggle(void* ref) {
+	DEBUG_SERIAL.print("UPPER Switch: "); DEBUG_SERIAL.println(upperSwitch.on() ^ SW_UPPER_INVERT);
+}
+
+void intButtonPress(void* ref) {
+	DEBUG_SERIAL.println("INT Pressed");
+}
+
+void intButtonRelease(void* ref) {
+	DEBUG_SERIAL.println("INT Released");
+}
+
+void tipButtonPress(void* ref) {
+	DEBUG_SERIAL.println("Tip Pressed");
+}
+
+void tipButtonRelease(void* ref) {
+	DEBUG_SERIAL.println("Tip Released");
+}
+
+void rotaryButtonPress(void* ref) {
+	DEBUG_SERIAL.println("Rotary Pressed");
+}
+
+void rotaryButtonRelease(void* ref) {
+	DEBUG_SERIAL.println("Rotary Released");
+}
+
+void rotaryButtonLongPress(void* ref) {
+	DEBUG_SERIAL.println("Rotary Held");
+}
+
 
 /*  ----------------------
 	State Management
 ----------------------- */
-void initialiseState(unsigned long currentMillis) {
+void initialiseState(State newState, unsigned long currentMillis) {
+
+	state = newState;
+
+	cmdMessenger.sendCmdStart(eventChangeState);
+	cmdMessenger.sendCmdArg(newState);
+	cmdMessenger.sendCmdEnd();
 
 }
 
@@ -407,7 +347,6 @@ void stateUpdate(unsigned long currentMillis) {
 /*  ----------------------
 	Serial Command Handling
 ----------------------- */
-
 void attachCmdMessengerCallbacks() {
 	cmdMessenger.attach(onUnknownCommand);
 }
@@ -415,4 +354,50 @@ void attachCmdMessengerCallbacks() {
 void onUnknownCommand()
 {
 	Serial.println("Command without attached callback");
+}
+
+
+/*  ----------------------
+	Body LED Management
+----------------------- */
+void bodyInit(unsigned long currentMillis) {
+
+}
+
+void bodyUpdate() {
+
+}
+
+/*  ----------------------
+	Barrel LED Management
+----------------------- */
+void barrelInit(unsigned long currentMillis) {
+
+}
+
+void barrelUpdate() {
+
+}
+
+/*  ----------------------
+	Tip LED Management
+----------------------- */
+void tipInit(unsigned long currentMillis) {
+
+}
+
+void tipUpdate() {
+
+}
+
+/*  ----------------------
+	Bar Graph Management
+----------------------- */
+void graphInit(unsigned long currentMillis) {
+	BarGraph.BGSeq();
+	BarGraph.initiateVariables(OFF);
+}
+
+void graphUpdate(unsigned long currentMillis) {
+
 }
