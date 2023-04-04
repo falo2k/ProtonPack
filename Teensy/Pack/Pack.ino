@@ -103,7 +103,6 @@ AudioControlSGTL5000     sgtl5000_1;     //xy=625,590
 
 // Amplifier
 #define MAX9744_I2CADDR 0x4B
-int8_t thevol = 31;
 
 // Neopixels
 Adafruit_NeoPixel pcellLights = Adafruit_NeoPixel(PCELL_LED_COUNT, PCELL_LED_PIN, NEO_GRBW + NEO_KHZ800);
@@ -207,7 +206,6 @@ void setup() {
     ventTimer.set(ventPeriod, ventUpdate);
     ventTimer.disable();
 
-
     pcellLights.show();
     cycloLights.show();
     ventLights.show();
@@ -217,7 +215,7 @@ void setup() {
 
 void attachCmdMessengerCallbacks() {
     cmdMessenger.attach(onUnknownCommand);
-    cmdMessenger.attach(eventButtonChange, onSwitchChange);
+    //cmdMessenger.attach(eventButtonChange, onSwitchChange);
 }
 
 void loop() {
@@ -375,14 +373,14 @@ void onUnknownCommand()
 // volume to the i2c bus. That's it!
 boolean setvolume(int8_t v) {
     // cant be higher than 63 or lower than 0
-    if (v > 63) v = 63;
+    if (v > maxvol) v = maxvol;
     if (v < 0) v = 0;
 
-    Serial.print("Setting volume to ");
+    DEBUG_SERIAL.print("Setting volume to ");
     DEBUG_SERIAL.println(v);
     Wire.beginTransmission(MAX9744_I2CADDR);
     Wire.write(v);
-    Serial.print("Volume Set");
+    DEBUG_SERIAL.print("Volume Set");
     if (Wire.endTransmission() == 0)
         return true;
     else
