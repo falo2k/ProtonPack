@@ -26,6 +26,8 @@ int8_t maxvol = 63;
 
 enum State { OFF, BOOTING, IDLE, POWERDOWN, FIRING, FIRING_WARN, OVERHEAT, VENTING, FIRING_STOP, MUSIC_MODE };
 
+enum ButtonEvent { PRESSED, HELD, RELEASED };
+
 // Hardware Serial Comms 
 // inintialize hardware constants
 const long BAUDRATE = 9600; // speed of serial connection

@@ -248,6 +248,8 @@ void loop() {
     pcellTimer.update();
     cycloTimer.update();
     ventTimer.update();
+
+    // Update the music playing state for the wand
 }
 
 /*  ----------------------
