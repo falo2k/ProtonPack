@@ -24,9 +24,25 @@ const int defaultTrack = 0;
 int8_t thevol = 31;
 int8_t maxvol = 63;
 
-enum State { OFF, BOOTING, IDLE, POWERDOWN, FIRING, FIRING_WARN, OVERHEAT, VENTING, FIRING_STOP, MUSIC_MODE };
+enum State { OFF = 'O',
+	BOOTING = 'B',
+	IDLE = 'I',
+	POWERDOWN = 'S',
+	FIRING = 'F',
+	FIRING_WARN = 'W',
+	VENTING = 'V',
+	FIRING_STOP = 'H',
+	MUSIC_MODE = 'M' };
 
 enum ButtonEvent { PRESSED, HELD, RELEASED };
+
+// Timings for routines in milliseconds
+#define BOOTING_TIME 2500
+#define POWERDOWN_TIME 2500
+#define OVERHEAT_TIME 10000
+#define FIRING_WARN_TIME 7500
+#define FIRING_STOP_TIME 2500
+#define VENT_TIME 5000
 
 // Hardware Serial Comms 
 // inintialize hardware constants
@@ -55,3 +71,36 @@ enum SerialCommands {
 	// TODO: Request and save config
 	// TODO: Force State change
 };
+
+
+//switch (state) {
+//case OFF:
+//	break;
+//
+//case BOOTING:
+//	break;
+//
+//case IDLE:
+//	break;
+//
+//case POWERDOWN:
+//	break;
+//
+//case FIRING:
+//	break;
+//
+//case FIRING_WARN:
+//	break;
+//
+//case VENTING:
+//	break;
+//
+//case FIRING_STOP:
+//	break;
+//
+//case MUSIC_MODE:
+//	break;
+//
+//default:
+//	break;
+//}

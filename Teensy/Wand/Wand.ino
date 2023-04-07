@@ -52,8 +52,8 @@ const int BODY_LED_COUNT = 5;
 const int SLO_BLO_INDEX = 0;
 const int VENT_INDEX = 1;
 const int FRONT_INDEX = 2;
-const int TOP1_INDEX = 3;
-const int TOP2_INDEX = 4;
+const int TOP_FORWARD_INDEX = 3;
+const int TOP_BACK_INDEX = 4;
 
 /*  ----------------------
 	State control
@@ -71,6 +71,7 @@ bool overheatMode = false;
 bool bluetoothMode = false;
 bool musicPlaying = false;
 int trackNumber = defaultTrack;
+unsigned long stateLastChanged;
 
 /*  ----------------------
 	Library objects
@@ -158,16 +159,18 @@ void setup() {
 	tipInit(currentMillis);
 	tipTimer.set(tipPeriod, tipUpdate);
 
+	// Set up the bar graph
+	graphInit(currentMillis);
+
 	// Initiate the input switches
 	setupInputs();
 	setStartupState(currentMillis);
 	
-	// Set up the bar graph
-	graphInit(currentMillis);
-
 	DEBUG_SERIAL.println("Setup Complete");
 	display.clear();
 	displayState = DISPLAY_OFF;
+
+	stateLastChanged = currentMillis;
 }
 
 int currentBGIndex = 0;
@@ -259,6 +262,8 @@ void drawDisplay(unsigned long currentMillis) {
 			break;
 
 		case DISPLAY_OFF:
+			break;
+
 		default:
 			display.clear();
 			break;
@@ -328,8 +333,7 @@ void actSwitchToggle(void* ref) {
 		}
 		else {
 			initialiseState(POWERDOWN, millis());
-		}
-		
+		}		
 	}
 }
 
@@ -407,6 +411,7 @@ void intButtonRelease(void* ref) {
 	DEBUG_SERIAL.println("INT Released");
 	
 	if ((state == MUSIC_MODE) && intHeld) {
+		intHeld = false;
 		return;
 	}
 
@@ -415,9 +420,11 @@ void intButtonRelease(void* ref) {
 	switch (state) {
 		case MUSIC_MODE:
 			if (musicPlaying) {
+				DEBUG_SERIAL.println("Pause SD Track");
 				cmdMessenger.sendCmd(eventPauseSDTrack);
 			}
 			else {
+				DEBUG_SERIAL.println("Play SD Track");
 				cmdMessenger.sendCmd(eventPlaySDTrack);
 			}
 			break;
@@ -470,6 +477,7 @@ void tipButtonRelease(void* ref) {
 	DEBUG_SERIAL.println("Tip Released");
 
 	if ((state == MUSIC_MODE) && tipHeld) {
+		tipHeld = false;
 		return;
 	}
 
@@ -656,27 +664,159 @@ void setStartupState(unsigned long currentMillis) {
 }
 
 void initialiseState(State newState, unsigned long currentMillis) {
-	state = newState;
+	// TODO: State initlisation
 
-	// TODO: State Switching and setup
+	DEBUG_SERIAL.print("Initialising State: "); DEBUG_SERIAL.println((char) newState);
+
+	switch (state) {
+		case OFF:
+			tipLights.clear();
+			bodyLights.clear();
+			barrelLights.clear();
+			BarGraph.clearLEDs();
+			break;
+
+		case BOOTING:			
+			BarGraph.initiateVariables(ACTIVE);			
+			//BarGraph.clearLEDs();
+			break;
+
+		case IDLE:
+			BarGraph.clearLEDs();
+			BarGraph.initiateVariables(START);			
+			// Vent light to max, top forward light on (mid brightness), slo-blo to red
+			bodyLights.setPixelColor(VENT_INDEX, bodyLights.Color(255, 255, 255, 255));
+			bodyLights.setPixelColor(TOP_FORWARD_INDEX, bodyLights.Color(150, 150, 150, 0));
+			bodyLights.setPixelColor(SLO_BLO_INDEX, bodyLights.Color(200, 0, 0, 0));
+			break;
+
+		case POWERDOWN:
+			BarGraph.clearLEDs();
+			BarGraph.initiateVariables(START);
+			break;
+
+		case FIRING:
+			BarGraph.initiateVariables(FIRE1);			
+			BarGraph.clearLEDs();
+			break;
+
+		case FIRING_WARN:
+			// Bargraph should continue from previous
+			break;
+
+		case VENTING:
+			tipLights.clear();
+			bodyLights.clear();
+			barrelLights.clear();
+			//BarGraph.clearLEDs();
+			BarGraph.initiateVariables(BGVENT);
+			break;
+
+		case FIRING_STOP:
+			tipLights.clear();
+			bodyLights.clear();
+			barrelLights.clear();
+			// Bargraph should continue from previous
+			break;
+
+		case MUSIC_MODE:
+			tipLights.clear();
+			bodyLights.clear();
+			barrelLights.clear();
+			BarGraph.clearLEDs();
+			break;
+
+		default:
+			break;
+	}
+
+	DEBUG_SERIAL.println("Updating LEDs");
+
+	tipLights.show();
+	bodyLights.show();
+	barrelLights.show();
+
+	DEBUG_SERIAL.println("Updating Pack State");
 
 	cmdMessenger.sendCmdStart(eventChangeState);
 	cmdMessenger.sendCmdArg(newState);
 	cmdMessenger.sendCmdEnd();
+
+	stateLastChanged = millis();
+
+	state = newState;
 }
 
 void stateUpdate(unsigned long currentMillis) {
-	// TODO: Ongoing state updates
+	// TODO: State Management
+	switch (state) {
+		case OFF:
+			break;
+
+		case BOOTING:
+			if (currentMillis > stateLastChanged + BOOTING_TIME) {
+				initialiseState(IDLE, currentMillis);
+			}
+			break;
+
+		case IDLE:
+			break;
+
+		case POWERDOWN:
+			if (currentMillis > stateLastChanged + POWERDOWN_TIME) {
+				initialiseState(OFF, currentMillis);
+			}
+			break;
+
+		case FIRING:
+			if (overheatMode &&  (currentMillis > stateLastChanged + OVERHEAT_TIME)) {
+				initialiseState(FIRING_WARN, currentMillis);
+			}
+			break;
+
+		case FIRING_WARN:
+			if (currentMillis > stateLastChanged + FIRING_WARN_TIME) {
+				initialiseState(VENTING, currentMillis);
+			}
+			break;
+
+		case VENTING:
+			if (currentMillis > stateLastChanged + VENT_TIME) {
+				initialiseState(BOOTING, currentMillis);
+			}
+			break;
+
+		case FIRING_STOP:
+			if (currentMillis > stateLastChanged + FIRING_STOP_TIME) {
+				initialiseState(IDLE, currentMillis);
+			}
+			break;
+
+		case MUSIC_MODE:
+			break;
+
+		default:
+			break;
+	}
 }
 
 void setSDTrack(unsigned long currentMillis, int newTrackNumber) {
-	// TODO: Change the track, change playing if need be, inform pack of change
 	trackNumber = newTrackNumber;
+
+	// Let the pack handle whether or not to change an in-flight track and update isPlaying if need be (shouldn't be
+	// necessary)
+	cmdMessenger.sendCmdStart(eventSetSDTrack);
+	cmdMessenger.sendCmdArg(trackNumber);
+	cmdMessenger.sendCmdEnd();
+
 }
 
 void setVolume(unsigned long currentMillis, int newVolume) {
-	// TODO: Change the pack volume
 	thevol = newVolume;
+
+	cmdMessenger.sendCmdStart(eventSetVolume);
+	cmdMessenger.sendCmdArg(thevol);
+	cmdMessenger.sendCmdEnd();
 }
 
 
@@ -791,7 +931,36 @@ void graphInit(unsigned long currentMillis) {
 }
 
 void graphUpdate(unsigned long currentMillis) {
+	switch (state) {
+	case OFF:
+	case MUSIC_MODE:
+		break;
 
+	case BOOTING:
+		BarGraph.sequenceStart(currentMillis);
+		break;
+
+	case IDLE:
+		BarGraph.sequencePackOn(currentMillis);
+		break;
+
+	case POWERDOWN:
+		BarGraph.sequenceShutdown(currentMillis);
+		break;
+
+	case FIRING:
+	case FIRING_WARN:
+	case FIRING_STOP:
+		BarGraph.sequenceFire1(currentMillis);
+		break;
+
+	case VENTING:
+		BarGraph.sequenceVent(currentMillis);
+		break;
+
+	default:
+		break;
+	}
 }
 
 /*  ----------------------
