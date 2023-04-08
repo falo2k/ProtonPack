@@ -22,7 +22,7 @@ const int trackCount = 14;
 const int defaultTrack = 0;
 
 // Timings for routines in milliseconds
-#define BOOTING_TIME 3900
+#define BOOTING_TIME 3000
 #define BOOTING_HUM_START 500
 #define POWERDOWN_TIME 3100
 #define OVERHEAT_TIME 10000

@@ -720,13 +720,13 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			break;
 	}
 
-	DEBUG_SERIAL.println("Updating LEDs");
+	//DEBUG_SERIAL.println("Updating LEDs");
 
 	tipLights.show();
 	bodyLights.show();
 	barrelLights.show();
 
-	DEBUG_SERIAL.println("Updating Pack State");
+	//DEBUG_SERIAL.println("Updating Pack State");
 
 	cmdMessenger.sendCmdStart(eventChangeState);
 	cmdMessenger.sendCmdArg(newState);

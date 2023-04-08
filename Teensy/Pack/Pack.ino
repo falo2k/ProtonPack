@@ -256,9 +256,11 @@ void ionSwitchToggle(void* ref) {
 }
 
 bool encoderHeld = false;
+bool encoderPressed = false;
 
 void rotaryButtonPress(void* ref) {
     DEBUG_SERIAL.println("Rotary Pressed");
+    encoderPressed = true;
     cmdMessenger.sendCmd(eventPackEncoderButton, PRESSED);
 }
 
@@ -270,6 +272,12 @@ void rotaryButtonLongPress(void* ref) {
 }
 
 void rotaryButtonRelease(void* ref) {
+    // Encoder is bouncing weirdly on startup
+    if (!encoderPressed) { return; }
+    else {
+        encoderPressed = false;
+    }
+
     DEBUG_SERIAL.println("Rotary Released");
 
     if (encoderHeld) {
@@ -502,8 +510,6 @@ void initialiseState(State newState, unsigned long currentMillis) {
         break;
     }
 
-    DEBUG_SERIAL.println("Updating LEDs");
-
     pcellLights.show();
     cycloLights.show();
     ventLights.show();
@@ -571,7 +577,8 @@ void stateUpdate(unsigned long currentMillis) {
 ----------------------- */
 int powerCellLitIndex = 0;
 const int powerCellMinPeriod = 1;
-const int powerCellIdlePeriod = 2000;
+const int powerCellIdlePeriod = 1500;
+const int powerDownDecayTickPeriod = 75;
 unsigned long lastPowerCellChange;
 uint32_t pCellColour = pcellLights.Color(150, 150, 150);
 
@@ -590,18 +597,16 @@ void pcellUpdate() {
 	        break;
 
         case BOOTING: {
-                int newPowerCellLitIndex = round(((max(stateLastChanged, currentMillis) - stateLastChanged) / BOOTING_TIME) * PCELL_LED_COUNT);
-                if (newPowerCellLitIndex != powerCellLitIndex) {
-                    powerCellLitIndex = newPowerCellLitIndex;
-                    pcellLightTo(powerCellLitIndex);
-                    lastPowerCellChange = currentMillis;
-                }
+                int newPowerCellLitIndex = round(2 * (((float)max(stateLastChanged, currentMillis) - stateLastChanged) / BOOTING_TIME) * PCELL_LED_COUNT);
+                powerCellLitIndex = newPowerCellLitIndex < PCELL_LED_COUNT ? newPowerCellLitIndex : (2 * PCELL_LED_COUNT) - newPowerCellLitIndex;
+                pcellLightTo(powerCellLitIndex);
+                lastPowerCellChange = currentMillis;
             }
 	        break;
 
         case IDLE:
-            if ((currentMillis - lastPowerCellChange) > (powerCellIdlePeriod / PCELL_LED_COUNT)) {
-                if (powerCellLitIndex == PCELL_LED_COUNT) {
+            if ((currentMillis - lastPowerCellChange) > (((float)powerCellIdlePeriod) / PCELL_LED_COUNT)) {
+                if (powerCellLitIndex >= PCELL_LED_COUNT) {
                     powerCellLitIndex = 0;
                     pcellLights.clear();
                     pcellLights.show();
@@ -615,9 +620,17 @@ void pcellUpdate() {
 	        break;
 
         case POWERDOWN:
+            if ((currentMillis - lastPowerCellChange) > powerDownDecayTickPeriod) {
+                if (powerCellLitIndex >= 0) {
+                    powerCellLitIndex--;
+                    pcellLightTo(powerCellLitIndex);
+                    lastPowerCellChange = currentMillis;
+                }
+            }
 	        break;
 
         case FIRING:
+            // Make the period shrink over time by moving the lowest index up (to a max position)
 	        break;
 
         case FIRING_WARN:
@@ -642,21 +655,12 @@ void pcellUpdate() {
                     }
                     pcellLights.show();
                 }
+                lastPowerCellChange = currentMillis;
             }
 	        break;
 
         default:
 	        break;
-    }
-
-
-    if (powerCellLitIndex == PCELL_LED_COUNT) {
-        powerCellLitIndex = 0;
-        pcellLights.clear();
-    }
-    else {
-        pcellLights.setPixelColor(powerCellLitIndex, pCellColour);
-        powerCellLitIndex++;
     }
 }
 
@@ -695,25 +699,7 @@ void cycloInit() {
 }
 
 void cycloUpdate() {
-    cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
-
-    if (cyclotronStep < cyclotronFadeOutSteps) {
-        cycloLights.setPixelColor((cyclotronLitIndex + 3) % 4, colourInterpolate(cyclotronFull, cyclotronLow, cyclotronStep, cyclotronFadeOutSteps));
-    }
-    else if (cyclotronStep == cyclotronFadeOutSteps) {
-        cycloLights.setPixelColor((cyclotronLitIndex + 3) % 4, 0);
-    }
-
-    cyclotronStep++;
     
-    if (cyclotronStep >= cyclotronSolidSteps) {
-        cyclotronStep = 0;
-        cyclotronLitIndex = (cyclotronLitIndex + 1) % 4;
-    }
-
-    cycloLights.show();
-
-    //cycloTimer.setPeriod(cycloPeriod);
 
     switch (state) {
     case OFF:
@@ -723,6 +709,25 @@ void cycloUpdate() {
         break;
 
     case IDLE:
+        cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
+
+        if (cyclotronStep < cyclotronFadeOutSteps) {
+            cycloLights.setPixelColor((cyclotronLitIndex + 3) % 4, colourInterpolate(cyclotronFull, cyclotronLow, cyclotronStep, cyclotronFadeOutSteps));
+        }
+        else if (cyclotronStep == cyclotronFadeOutSteps) {
+            cycloLights.setPixelColor((cyclotronLitIndex + 3) % 4, 0);
+        }
+
+        cyclotronStep++;
+
+        if (cyclotronStep >= cyclotronSolidSteps) {
+            cyclotronStep = 0;
+            cyclotronLitIndex = (cyclotronLitIndex + 1) % 4;
+        }
+
+        cycloLights.show();
+
+        //cycloTimer.setPeriod(cycloPeriod);
         break;
 
     case POWERDOWN:
