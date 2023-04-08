@@ -2,21 +2,18 @@
  This sketch is designed to run on a Teensy LC in the wand of the proton pack.
 */
 
+#include <ProtonPackCommon.h>
+
 #include <Encoder.h>
 #include <avdweb_Switch.h>
-
 #include <TimerEvent.h>
-
 #include <lcdgfx.h>
 #include <lcdgfx_gui.h>
 #include <nano_engine_v2.h>
 #include <nano_gfx_types.h>
-
 #include "BGSequence.h"
 #include <Adafruit_NeoPixel.h>
 #include <CmdMessenger.h>
-
-#include <ProtonPackCommon.h>
 
 /*  ----------------------
 	Variables to flip switch directions depending on
@@ -27,6 +24,24 @@ int rotaryDirection = -1;
 const bool SW_ACTIVATE_INVERT = false;
 const bool SW_LOWER_INVERT = false;
 const bool SW_UPPER_INVERT = false;
+
+/*  ----------------------
+	State control
+----------------------- */
+enum BarGraphSequences { START, ACTIVE, FIRE1, FIRE2, BGVENT };
+BarGraphSequences BGMODE;
+
+enum displayStates { DISPLAY_OFF, TOP_MENU, VOLUME_CHANGE, VOLUME_DISPLAY, TRACK_SELECT, TRACK_DISPLAY, VENTMODE, INPUTSTATE, BOOT_LOGO, SAVE_SETTINGS };
+int selectedIndex = 0;
+displayStates displayState;
+
+State state = OFF;
+
+bool overheatMode = false;
+bool bluetoothMode = false;
+bool musicPlaying = false;
+int trackNumber = defaultTrack;
+unsigned long stateLastChanged;
 
 /*  ----------------------
 	Pin & Range Definitions
@@ -56,24 +71,6 @@ const int TOP_FORWARD_INDEX = 3;
 const int TOP_BACK_INDEX = 4;
 
 /*  ----------------------
-	State control
------------------------ */
-enum BarGraphSequences { START, ACTIVE, FIRE1, FIRE2, BGVENT };
-BarGraphSequences BGMODE;
-
-enum displayStates { DISPLAY_OFF, TOP_MENU, VOLUME_CHANGE, VOLUME_DISPLAY, TRACK_SELECT, TRACK_DISPLAY, VENTMODE, INPUTSTATE, BOOT_LOGO, SAVE_SETTINGS };
-int selectedIndex = 0;
-displayStates displayState;
-
-State state = OFF;
-
-bool overheatMode = false;
-bool bluetoothMode = false;
-bool musicPlaying = false;
-int trackNumber = defaultTrack;
-unsigned long stateLastChanged;
-
-/*  ----------------------
 	Library objects
 ----------------------- */
 // Display setup
@@ -91,6 +88,9 @@ Adafruit_NeoPixel bodyLights = Adafruit_NeoPixel(BODY_LED_COUNT, BODY_LED_PIN, N
 BGSequence BarGraph;
 unsigned long CuurentBGInterval = BarGraph.IntervalBG;
 bool first = true;
+int currentBGIndex = 0;
+long lastBGUpdate = 0;
+long bgInterval = 1000;
 
 // Serial Command Controller - Use hardware serial port
 CmdMessenger cmdMessenger = CmdMessenger(Serial1);
@@ -98,10 +98,10 @@ CmdMessenger cmdMessenger = CmdMessenger(Serial1);
 Encoder ROTARY(ROT_A_PIN, ROT_B_PIN);
 
 Switch actSwitch = Switch(SW_ACTIVATE_PIN);
-Switch intButton = Switch(BTN_INTENSIFY_PIN);
+Switch intButton = Switch(BTN_INTENSIFY_PIN, INPUT_PULLUP, LOW, 50, 1000);
 Switch lowerSwitch = Switch(SW_LOWER_PIN);
 Switch upperSwitch = Switch(SW_UPPER_PIN);
-Switch tipButton = Switch(BTN_TIP_PIN);
+Switch tipButton = Switch(BTN_TIP_PIN, INPUT_PULLUP, LOW, 50, 1000);
 Switch encoderButton = Switch(ROT_BTN_PIN);
 
 /*  ----------------------
@@ -173,10 +173,6 @@ void setup() {
 	stateLastChanged = currentMillis;
 }
 
-int currentBGIndex = 0;
-long lastBGUpdate = 0;
-long bgInterval = 1000;
-
 void loop() {
 	unsigned long currentMillis = millis();
 
@@ -224,6 +220,9 @@ void displayBoot(unsigned long currentMillis) {
 void drawDisplay(unsigned long currentMillis) {
 	display.clear();
 
+	DEBUG_SERIAL.print("Drawing Display: "); DEBUG_SERIAL.println(displayState);
+	DEBUG_SERIAL.print("Selected Index: "); DEBUG_SERIAL.println(selectedIndex);
+
 	switch (displayState){
 		case TOP_MENU:
 			display.setFixedFont(ssd1306xled_font8x16);
@@ -233,31 +232,32 @@ void drawDisplay(unsigned long currentMillis) {
 			break;
 
 		case VOLUME_CHANGE:
-		case VOLUME_DISPLAY:
+		case VOLUME_DISPLAY: {
 			display.setFixedFont(ssd1306xled_font8x16);
 			// XPos for header starts at 64 - (8*3)
+			int volPos = 14 - 8 + floor(100.0 * selectedIndex / maxvol);
 			char volStr[2];
 			sprintf(volStr, "%02d", selectedIndex);
 			display.printFixed(40, 0, "VOLUME", STYLE_BOLD);
-			int volPos = 14 - 8 + floor(100.0 * selectedIndex / maxvol);			
 			display.printFixed(volPos, 16, volStr, STYLE_NORMAL);
 			display.drawVLine(4, 17, 31);
 			display.drawVLine(124, 17, 31);
 			display.drawHLine(5, 24, volPos - 2);
-			display.drawHLine(volPos + 16 + 2, 24, 123);	
+			display.drawHLine(volPos + 16 + 2, 24, 123);
+			}
 			break;
 
 		case TRACK_SELECT:
 			display.setFixedFont(ssd1306xled_font6x8);
-			display.printFixed(6, 2, trackList[loop(selectedIndex-1,trackCount)][1], STYLE_NORMAL);
+			display.printFixed(6, 2, trackList[looparound(selectedIndex-1,trackCount)][1], STYLE_NORMAL);
 			display.printFixed(0, 12, ">", STYLE_BOLD);
 			display.printFixed(6, 12, trackList[selectedIndex][1], STYLE_BOLD);
-			display.printFixed(6, 22, trackList[loop(selectedIndex + 1, trackCount)][1], STYLE_NORMAL);
-			setSDTrack(currentMillis, selectedIndex);
+			display.printFixed(6, 22, trackList[looparound(selectedIndex + 1, trackCount)][1], STYLE_NORMAL);			
 			break;
 
 		case TRACK_DISPLAY:
 			display.setFixedFont(ssd1306xled_font6x8);
+			DEBUG_SERIAL.print("Displaying Track Name: "); DEBUG_SERIAL.println(trackList[trackNumber][1]);
 			display.printFixed(0, 12, trackList[trackNumber][1], STYLE_BOLD);
 			break;
 
@@ -374,8 +374,7 @@ void upperSwitchToggle(void* ref) {
 			// Revert to idling from whatever state we're in
 			initialiseState(IDLE, millis());
 		}
-	}
-	
+	}	
 }
 
 bool intHeld = false;
@@ -400,7 +399,8 @@ void intButtonLongPress(void* ref) {
 	unsigned long currentMillis = millis();
 
 	if ((state == MUSIC_MODE) && (!bluetoothMode)) {
-		setSDTrack(currentMillis, loop(trackNumber + 1,trackCount));
+		setSDTrack(currentMillis, looparound(trackNumber + 1,trackCount));
+		displayState = TRACK_DISPLAY;
 		drawDisplay(currentMillis);				
 	}
 
@@ -419,14 +419,8 @@ void intButtonRelease(void* ref) {
 
 	switch (state) {
 		case MUSIC_MODE:
-			if (musicPlaying) {
-				DEBUG_SERIAL.println("Pause SD Track");
-				cmdMessenger.sendCmd(eventPauseSDTrack);
-			}
-			else {
-				DEBUG_SERIAL.println("Play SD Track");
-				cmdMessenger.sendCmd(eventPlaySDTrack);
-			}
+			DEBUG_SERIAL.println("Play/Pause SD Track");
+			cmdMessenger.sendCmd(eventPlayPauseSDTrack);
 			break;
 
 		case IDLE:
@@ -466,7 +460,8 @@ void tipButtonLongPress(void* ref) {
 	unsigned long currentMillis = millis();
 
 	if ((state == MUSIC_MODE) && (!bluetoothMode)) {
-		setSDTrack(currentMillis, loop(trackNumber - 1, trackCount));
+		setSDTrack(currentMillis, looparound(trackNumber - 1, trackCount));
+		displayState = TRACK_DISPLAY;
 		drawDisplay(currentMillis);
 	}
 
@@ -489,13 +484,9 @@ void tipButtonRelease(void* ref) {
 		return;
 	}
 
-	
-
 	switch (state) {
 	case MUSIC_MODE:
-		if (musicPlaying) {
-			cmdMessenger.sendCmd(eventStopSDTrack);
-		}
+		cmdMessenger.sendCmd(eventStopSDTrack);		
 		break;
 
 	case IDLE:
@@ -568,6 +559,7 @@ void rotaryButtonRelease(void* ref) {
 
 	switch (displayState){
 		case TOP_MENU:
+			DEBUG_SERIAL.print("Selected Top Menu Item: "); DEBUG_SERIAL.println(selectedIndex);
 			switch (selectedIndex) {
 				case 0:
 					selectedIndex = thevol;
@@ -584,21 +576,21 @@ void rotaryButtonRelease(void* ref) {
 			}
 			
 			drawDisplay(currentMillis);
-			break;
+			return;
 
 		case VOLUME_CHANGE:
 			setVolume(currentMillis, selectedIndex);
 			selectedIndex = 0;
 			displayState = TOP_MENU;			
 			drawDisplay(currentMillis);
-			break;
+			return;
 
 		case TRACK_SELECT:
 			setSDTrack(currentMillis, selectedIndex);
 			selectedIndex = 0;
 			displayState = TOP_MENU;
 			drawDisplay(currentMillis);
-			break;
+			return;
 
 		case DISPLAY_OFF:
 		case VOLUME_DISPLAY:
@@ -612,7 +604,7 @@ void rotaryMove(unsigned long currentMillis, int movement) {
 	if (displayState != DISPLAY_OFF) {
 		switch (displayState) {
 			case TOP_MENU:
-				selectedIndex = loop((selectedIndex + movement) , 2);
+				selectedIndex = looparound((selectedIndex + movement) , 2);
 				break;
 
 			case VOLUME_CHANGE:
@@ -620,7 +612,7 @@ void rotaryMove(unsigned long currentMillis, int movement) {
 				break;
 
 			case TRACK_SELECT:
-				selectedIndex = loop((selectedIndex + movement) , trackCount);
+				selectedIndex = looparound((selectedIndex + movement) , trackCount);
 				break;
 
 			default:
@@ -664,11 +656,9 @@ void setStartupState(unsigned long currentMillis) {
 }
 
 void initialiseState(State newState, unsigned long currentMillis) {
-	// TODO: State initlisation
-
 	DEBUG_SERIAL.print("Initialising State: "); DEBUG_SERIAL.println((char) newState);
 
-	switch (state) {
+	switch (newState) {
 		case OFF:
 			tipLights.clear();
 			bodyLights.clear();
@@ -748,7 +738,6 @@ void initialiseState(State newState, unsigned long currentMillis) {
 }
 
 void stateUpdate(unsigned long currentMillis) {
-	// TODO: State Management
 	switch (state) {
 		case OFF:
 			break;
@@ -931,6 +920,7 @@ void graphInit(unsigned long currentMillis) {
 }
 
 void graphUpdate(unsigned long currentMillis) {
+	// TODO: Handle Graph Animations in file - rise, pulse, sweep
 	switch (state) {
 	case OFF:
 	case MUSIC_MODE:
@@ -967,7 +957,7 @@ void graphUpdate(unsigned long currentMillis) {
 	Helper Functions
 ----------------------- */
 // Limit with a loop around for negative changes
-int loop(int input, int limit) {
+int looparound(int input, int limit) {
 	while (input < 0) {
 		input += limit;
 	}
