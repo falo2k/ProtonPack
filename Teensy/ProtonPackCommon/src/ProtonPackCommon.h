@@ -2,8 +2,10 @@
 
 #define DEBUG true
 #define DEBUG_SERIAL if(DEBUG)Serial
-                              //XXXXXX20CHARXXXXXXXX
-const char* trackList[][2] = { 
+
+#include <Adafruit_NeoPixel.h>
+							   
+const char* trackList[][2] = { //XXXXXX20CHARXXXXXXXX 
 	{"MUSIC/THEME.WAV",			"Ghostbusters Theme"}, 
 	{"MUSIC/CLEANIN.WAV",		"Cleanin' Up The Town"} ,
 	{"MUSIC/SAVIN.WAV",			"Savin' The Day"},
@@ -83,6 +85,61 @@ enum SerialCommands {
 	// TODO: Request and save config
 	// TODO: Force State change
 };
+
+/*  ----------------------
+	Helper Functions
+	- Some of these are pulled from the adafruit neopixel 
+----------------------- */
+// Returns the Red component of a 32-bit color
+uint8_t White(uint32_t color)
+{
+	return (color >> 24) & 0xFF;
+}
+
+// Returns the Red component of a 32-bit color
+uint8_t Red(uint32_t color)
+{
+	return (color >> 16) & 0xFF;
+}
+
+// Returns the Green component of a 32-bit color
+uint8_t Green(uint32_t color)
+{
+	return (color >> 8) & 0xFF;
+}
+
+// Returns the Blue component of a 32-bit color
+uint8_t Blue(uint32_t color)
+{
+	return color & 0xFF;
+}
+
+// Interpolate between two colours
+uint32_t colourInterpolate(uint32_t c1, uint32_t c2, int step, int totalSteps) {
+	uint8_t c1w = (uint8_t)(c1 >> 24), c1r = (uint8_t)(c1 >> 16), c1g = (uint8_t)(c1 >> 8), c1b = (uint8_t)c1;
+	uint8_t c2w = (uint8_t)(c2 >> 24), c2r = (uint8_t)(c2 >> 16), c2g = (uint8_t)(c2 >> 8), c2b = (uint8_t)c2;
+
+	return Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::Color((c1r * (totalSteps - step) + c2r * step) / totalSteps,
+		(c1g * (totalSteps - step) + c2g * step) / totalSteps,
+		(c1b * (totalSteps - step) + c2b * step) / totalSteps,
+		(c1w * (totalSteps - step) + c2w * step) / totalSteps));
+}
+
+// Return color, dimmed by 75%
+int32_t DimColor(uint32_t color)
+{
+	uint32_t dimColor = Adafruit_NeoPixel::Color(Red(color) >> 1, Green(color) >> 1, Blue(color) >> 1);
+	return dimColor;
+}
+
+// Limit with a loop around for negative changes
+int looparound(int input, int limit) {
+	while (input < 0) {
+		input += limit;
+	}
+
+	return input % limit;
+}
 
 
 //switch (state) {

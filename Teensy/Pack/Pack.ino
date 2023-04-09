@@ -24,16 +24,6 @@ const bool SW_ION_INVERT = false;
 int cyclotronDirection = 1;
 
 /*  ----------------------
-    State control
------------------------ */
-State state = OFF;
-
-int lastRotaryPosition = 0;
-bool bluetoothMode = false;
-int trackNumber = defaultTrack;
-unsigned long stateLastChanged;
-
-/*  ----------------------
     Pin & Range Definitions
     : Note that for ranges the indexes are inclusive
 ----------------------- */
@@ -72,6 +62,7 @@ AudioMixer4              audioMixer;         //xy=728,389
 AudioOutputI2S           audioOutput;           //xy=930,414
 AudioAnalyzeRMS          audioRMS;           //xy=913,594
 AudioAnalyzePeak         audioPeak;          //xy=916,517
+AudioAnalyzeFFT256       audioFFT;
 AudioConnection          patchCord1(audioIn, 0, audioInMonoMix, 0);
 AudioConnection          patchCord2(audioIn, 1, audioInMonoMix, 1);
 AudioConnection          patchCord3(sdBackgroundChannel, 0, audioMixer, mixerChannel1);
@@ -80,6 +71,7 @@ AudioConnection          patchCord5(audioInMonoMix, 0, audioMixer, mixerAudioInC
 AudioConnection          patchCord6(audioMixer, 0, audioOutput, 0);
 AudioConnection          patchCord7(audioMixer, audioPeak);
 AudioConnection          patchCord8(audioMixer, audioRMS);
+AudioConnection          patchCord9(audioMixer, audioFFT);
 AudioControlSGTL5000     sgtl5000_1;     //xy=625,590
 // GUItool: end automatically generated code
 
@@ -107,11 +99,59 @@ Switch encoderButton = Switch(ROT_BTN_PIN);
     Timers
 ----------------------- */
 TimerEvent pcellTimer;
-int pcellPeriod = 50;
+int pcellTimerPeriod = 50;
 TimerEvent cycloTimer;
-int cycloPeriod = 50;
+int cycloTimerPeriod = 50;
 TimerEvent ventTimer;
-int ventPeriod = 50;
+int ventTimerPeriod = 50;
+
+/*  ----------------------
+    State control
+----------------------- */
+State state = OFF;
+
+int lastRotaryPosition = 0;
+bool bluetoothMode = false;
+int trackNumber = defaultTrack;
+unsigned long stateLastChanged;
+
+// POWER CELL STATE
+int powerCellLitIndex = 0;
+const int powerCellIdlePeriod = 1500;
+int powerCellPeriod = 1500;
+const int powerDownPCellDecayTickPeriod = (int)(0.025 * POWERDOWN_TIME);
+unsigned long lastPowerCellChange;
+uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 150);
+
+// CYCLOTRON STATE
+int cyclotronLitIndex = 0;
+unsigned long lastCycloChange[CYCLO_LED_COUNT];
+const int cyclotronMinPeriod = 100;
+const int cyclotronIdlePeriod = 4000;
+// ms to reduce spin period per ms of firing
+const float cyclotronFiringAcceleration = 0.05;
+int cyclotronSpinPeriod = 4000;
+// Rate for cyclotron lamps to fade under normal operation
+const int lampFadeMs = 250;
+const float cycloSpinDecayRate = 255.0 / lampFadeMs;
+
+uint32_t savedCyclotronValues[CYCLO_LED_COUNT];
+
+const unsigned long powerDownCycloDecayTickPeriod = (int)(0.1 * POWERDOWN_TIME);
+// Decay rate for powercell shutdown in pixel value per ms.  
+// At most full lights switch off in 80% of shutdown time
+const float powerDownCycloDecayRate = (float)255 / (0.8 * POWERDOWN_TIME);
+
+const int cyclotronLowR = 25;
+const int cyclotronLowG = 0;
+const int cyclotronLowB = 0;
+const int cyclotronLowW = 0;
+const int cyclotronFullR = 255;
+const int cyclotronFullG = 0;
+const int cyclotronFullB = 0;
+const int cyclotronFullW = 0;
+uint32_t cyclotronLow = Adafruit_NeoPixel::Color(cyclotronLowR, cyclotronLowG, cyclotronLowB, cyclotronLowW);
+uint32_t cyclotronFull = Adafruit_NeoPixel::Color(cyclotronFullR, cyclotronFullG, cyclotronFullB, cyclotronFullW);
 
 /*  ----------------------
     Setup and Loops
@@ -179,11 +219,11 @@ void setup() {
     ventLights.clear();
     
     pcellInit();
-    pcellTimer.set(pcellPeriod, pcellUpdate);
+    pcellTimer.set(pcellTimerPeriod, pcellUpdate);
     cycloInit();
-    cycloTimer.set(cycloPeriod, cycloUpdate);
+    cycloTimer.set(cycloTimerPeriod, cycloUpdate);
     ventInit();
-    ventTimer.set(ventPeriod, ventUpdate);
+    ventTimer.set(ventTimerPeriod, ventUpdate);
     ventTimer.disable();
 
     pcellLights.show();
@@ -290,48 +330,6 @@ void rotaryButtonRelease(void* ref) {
 void rotaryMove(unsigned long currentMillis, int movement) {
     cmdMessenger.sendCmd(eventPackEncoderTurn, movement);
 }
-
-/*  ----------------------
-    LED Functions
------------------------ */
-unsigned long lastLEDCycle = 0;
-unsigned long ledCycleInterval = 10000;
-unsigned long lastLEDUpdate = 0;
-unsigned long ledUpdateRate = 100;
-
-
-void updateLeds(unsigned long currentMillis) {
-
-    if (currentMillis - lastLEDUpdate > ledUpdateRate) {
-        pcellLights.clear();
-
-        float rotation = 2.0 * M_PI * (((float)currentMillis - lastLEDCycle) / ledCycleInterval);
-
-        int sinVal = ((int)floor(((1.0 + sin(rotation)) / 2) * 255));
-        int cosVal = ((int)floor(((1.0 + cos(rotation)) / 2) * 255));
-
-        for (int i = 0; i <= PCELL_LED_COUNT; i++) {
-            pcellLights.setPixelColor(i, pcellLights.Color(sinVal, cosVal, sinVal));
-        }
-
-        pcellLights.show();
-    }
-
-    if (currentMillis - lastLEDCycle > ledCycleInterval) {
-        lastLEDCycle = currentMillis;
-    }    
-}
-
-uint32_t colourInterpolate(uint32_t c1, uint32_t c2, int step, int totalSteps) {
-    uint8_t c1w = (uint8_t)(c1 >> 24), c1r = (uint8_t)(c1 >> 16), c1g = (uint8_t)(c1 >> 8), c1b = (uint8_t)c1;
-    uint8_t c2w = (uint8_t)(c2 >> 24), c2r = (uint8_t)(c2 >> 16), c2g = (uint8_t)(c2 >> 8), c2b = (uint8_t)c2;
-
-    return pcellLights.gamma32(pcellLights.Color((c1r * (totalSteps - step) + c2r * step) / totalSteps,
-        (c1g * (totalSteps - step) + c2g * step) / totalSteps,
-        (c1b * (totalSteps - step) + c2b * step) / totalSteps,
-        (c1w * (totalSteps - step) + c2w * step) / totalSteps));
-}
-
 
 /*  ----------------------
     Music Functions
@@ -479,23 +477,31 @@ void initialiseState(State newState, unsigned long currentMillis) {
             sdFXChannel.stop();
             toggleBluetoothModule(false);
         }
+        powerCellPeriod = powerCellIdlePeriod;
+        cyclotronSpinPeriod = cyclotronIdlePeriod;        
+        for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+            lastCycloChange[i] = currentMillis;
+        }
+        //cycloLights.clear();
+        cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
+        pcellLights.clear();
+        ventLights.clear();
         break;
 
     case POWERDOWN:
+        for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+            savedCyclotronValues[i] = cycloLights.getPixelColor(i);
+        }
         break;
 
     case FIRING:
-        break;
-
     case FIRING_WARN:
+    case FIRING_STOP:         
         break;
-
+        
     case VENTING:
         break;
-
-    case FIRING_STOP:
-        break;
-
+    
     case MUSIC_MODE:
         pcellLights.clear();
         cycloLights.clear();
@@ -519,6 +525,8 @@ void initialiseState(State newState, unsigned long currentMillis) {
     state = newState;
 }
 
+unsigned long lastStateUpdate = 0;
+
 void stateUpdate(unsigned long currentMillis) {
     // TODO: State Management
     switch (state) {
@@ -541,26 +549,14 @@ void stateUpdate(unsigned long currentMillis) {
         break;
 
     case FIRING:
-        //if (overheatMode && (currentMillis > stateLastChanged + OVERHEAT_TIME)) {
-        //    initialiseState(FIRING_WARN, currentMillis);
-        //}
-        break;
-
     case FIRING_WARN:
-        if (currentMillis > stateLastChanged + FIRING_WARN_TIME) {
-            //initialiseState(VENTING, currentMillis);
-        }
+    case FIRING_STOP:
+        cyclotronSpinPeriod = max(cyclotronMinPeriod, cyclotronSpinPeriod - ((currentMillis - lastStateUpdate) * cyclotronFiringAcceleration));
         break;
 
     case VENTING:
         if (currentMillis > stateLastChanged + VENT_TIME) {
             //initialiseState(BOOTING, currentMillis);
-        }
-        break;
-
-    case FIRING_STOP:
-        if (currentMillis > stateLastChanged + FIRING_STOP_TIME) {
-            //initialiseState(IDLE, currentMillis);
         }
         break;
 
@@ -570,21 +566,16 @@ void stateUpdate(unsigned long currentMillis) {
     default:
         break;
     }
+
+    lastStateUpdate = currentMillis;
 }
 
 /*  ----------------------
     Power Cell Management
 ----------------------- */
-int powerCellLitIndex = 0;
-const int powerCellMinPeriod = 1;
-const int powerCellIdlePeriod = 1500;
-const int powerDownDecayTickPeriod = 75;
-unsigned long lastPowerCellChange;
-uint32_t pCellColour = pcellLights.Color(150, 150, 150);
-
 void pcellInit() {
-    // Idle Animation
     lastPowerCellChange = millis();
+    powerCellPeriod = powerCellIdlePeriod;
     powerCellLitIndex = 0;
     pcellLights.clear();    
 }
@@ -605,7 +596,7 @@ void pcellUpdate() {
 	        break;
 
         case IDLE:
-            if ((currentMillis - lastPowerCellChange) > (((float)powerCellIdlePeriod) / PCELL_LED_COUNT)) {
+            if ((currentMillis - lastPowerCellChange) > (((float)powerCellPeriod) / PCELL_LED_COUNT)) {
                 if (powerCellLitIndex >= PCELL_LED_COUNT) {
                     powerCellLitIndex = 0;
                     pcellLights.clear();
@@ -620,7 +611,7 @@ void pcellUpdate() {
 	        break;
 
         case POWERDOWN:
-            if ((currentMillis - lastPowerCellChange) > powerDownDecayTickPeriod) {
+            if ((currentMillis - lastPowerCellChange) > powerDownPCellDecayTickPeriod) {
                 if (powerCellLitIndex >= 0) {
                     powerCellLitIndex--;
                     pcellLightTo(powerCellLitIndex);
@@ -651,7 +642,7 @@ void pcellUpdate() {
                     pcellLightTo(powerCellLitIndex, false);
                     if (powerCellLitIndex < PCELL_LED_COUNT) {
                         float remainder = 0.01 * (((int) (peakMultiplier * peak * PCELL_LED_COUNT * 100.0)) % 100);
-                        pcellLights.setPixelColor(powerCellLitIndex + 1, pcellLights.Color(0, 0, floor(remainder * 255), floor(remainder * 100)));
+                        pcellLights.setPixelColor(powerCellLitIndex + 1, Adafruit_NeoPixel::Color(0, 0, floor(remainder * 255), floor(remainder * 100)));
                     }
                     pcellLights.show();
                 }
@@ -679,80 +670,98 @@ void pcellLightTo(int lightIndex, bool show) {
 /*  ----------------------
     Cyclotron Management
 ----------------------- */
-int cyclotronLitIndex = 0;
-int cyclotronStep = 0;
-int cyclotronFadeInSteps = 5;
-int cyclotronFadeOutSteps = 30;
-int cyclotronSolidSteps = 200;
-const int cyclotronMinPeriod = 1;
-const int cyclotronIdlePeriod = 1000;
-
-uint32_t cyclotronLow = cycloLights.Color(25, 0, 0);
-uint32_t cyclotronFull = cycloLights.Color(255, 0, 0);
-
 void cycloInit() {
-    // Basic rotation animation
+    unsigned long currentMillis = millis();
     cyclotronLitIndex = 0;
-    cyclotronStep = 0;
-    cycloPeriod = cyclotronIdlePeriod / cyclotronSolidSteps;
-    cycloTimer.setPeriod(cycloPeriod);
+    cyclotronSpinPeriod = cyclotronIdlePeriod;
+    for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+        lastCycloChange[i] = currentMillis;
+    }
 }
 
 void cycloUpdate() {
-    
+    unsigned long currentMillis = millis();
 
     switch (state) {
     case OFF:
         break;
 
-    case BOOTING:
-        break;
+    case BOOTING:{
+            float cycloIntensity = ((float) (max(stateLastChanged, currentMillis) - stateLastChanged)) / BOOTING_TIME;
+            for (int i = 0; i < CYCLO_LED_COUNT; i++) {                
+                cycloLights.setPixelColor(i, Adafruit_NeoPixel::Color((int)(cycloIntensity * cyclotronFullR), (int)(cycloIntensity * cyclotronFullG), (int)(cycloIntensity * cyclotronFullB), (int)(cycloIntensity * cyclotronFullW)));
+                lastCycloChange[i] = currentMillis;
+            }
 
-    case IDLE:
-        cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
-
-        if (cyclotronStep < cyclotronFadeOutSteps) {
-            cycloLights.setPixelColor((cyclotronLitIndex + 3) % 4, colourInterpolate(cyclotronFull, cyclotronLow, cyclotronStep, cyclotronFadeOutSteps));
+            cycloLights.show();           
         }
-        else if (cyclotronStep == cyclotronFadeOutSteps) {
-            cycloLights.setPixelColor((cyclotronLitIndex + 3) % 4, 0);
+        break;
+
+        case FIRING:
+        case FIRING_WARN:
+        case FIRING_STOP:
+        case IDLE: {
+            // Move the lit lamp if we hit the period change
+            if ((currentMillis - lastCycloChange[cyclotronLitIndex]) > (((float)cyclotronSpinPeriod) / CYCLO_LED_COUNT)) {
+                // Set the current time as last update for the old lamp, and save value at time
+                lastCycloChange[cyclotronLitIndex] = currentMillis;
+                savedCyclotronValues[cyclotronLitIndex] = cycloLights.getPixelColor(cyclotronLitIndex);
+                cyclotronLitIndex = looparound(cyclotronLitIndex + cyclotronDirection, CYCLO_LED_COUNT);                
+                cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
+
+                // Set the current time as last update for the new lamp, and save value at time
+                lastCycloChange[cyclotronLitIndex] = currentMillis;
+                savedCyclotronValues[cyclotronLitIndex] = cycloLights.getPixelColor(cyclotronLitIndex);
+            }            
+
+            // Fade non-lit lamps
+            for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+                if (i != cyclotronLitIndex) {
+                    unsigned long timeSinceLastChange = max(currentMillis, lastCycloChange[i]) - lastCycloChange[i];
+                    cycloLights.setPixelColor(i,
+                        Adafruit_NeoPixel::Color(
+                            max(0, Red(savedCyclotronValues[i]) - ((int)(cycloSpinDecayRate * timeSinceLastChange))),
+                            max(0, Green(savedCyclotronValues[i]) - ((int)(cycloSpinDecayRate * timeSinceLastChange))),
+                            max(0, Blue(savedCyclotronValues[i]) - ((int)(cycloSpinDecayRate * timeSinceLastChange))),
+                            max(0, White(savedCyclotronValues[i]) - ((int)(cycloSpinDecayRate * timeSinceLastChange)))
+                        )
+                    );
+                }
+            }
+
+            cycloLights.show();
         }
+        break;
 
-        cyclotronStep++;
-
-        if (cyclotronStep >= cyclotronSolidSteps) {
-            cyclotronStep = 0;
-            cyclotronLitIndex = (cyclotronLitIndex + 1) % 4;
+    case POWERDOWN: {
+            unsigned long timeSinceShutdown = max(currentMillis, stateLastChanged) - stateLastChanged;
+            for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+                cycloLights.setPixelColor(i,
+                    Adafruit_NeoPixel::Color(
+                        max(0,Red(savedCyclotronValues[i]) - ((int)(powerDownCycloDecayRate * timeSinceShutdown))),
+                        max(0, Green(savedCyclotronValues[i]) - ((int)(powerDownCycloDecayRate * timeSinceShutdown))),
+                        max(0, Blue(savedCyclotronValues[i]) - ((int)(powerDownCycloDecayRate * timeSinceShutdown))),
+                        max(0, White(savedCyclotronValues[i]) - ((int)(powerDownCycloDecayRate * timeSinceShutdown)))
+                    )
+                );
+                lastCycloChange[i] = currentMillis;
+            }
+            cycloLights.show();
         }
-
-        cycloLights.show();
-
-        //cycloTimer.setPeriod(cycloPeriod);
-        break;
-
-    case POWERDOWN:
-        break;
-
-    case FIRING:
-        break;
-
-    case FIRING_WARN:
         break;
 
     case VENTING:
         break;
-
-    case FIRING_STOP:
-        break;
-
-    case MUSIC_MODE:
-        if (audioRMS.available()) {
-            float rms = audioRMS.read();
-            int brightness = min(255,255 * rms * 2);
-            for (int i = 0; i < CYCLO_LED_COUNT; i++) {
-                cycloLights.setPixelColor(i, cycloLights.Color(brightness, 0, 0));
+            
+    case MUSIC_MODE: {
+            if (audioRMS.available()) {
+                float rms = audioRMS.read();
+                int brightness = min(255,255 * rms * 2);
+                for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+                    cycloLights.setPixelColor(i, Adafruit_NeoPixel::Color(brightness, 0, 0));
+                }
+                cycloLights.show();
             }
-            cycloLights.show();
         }
         break;
 

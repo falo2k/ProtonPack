@@ -675,14 +675,15 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			BarGraph.clearLEDs();
 			BarGraph.initiateVariables(START);			
 			// Vent light to max, top forward light on (mid brightness), slo-blo to red
-			bodyLights.setPixelColor(VENT_INDEX, bodyLights.Color(255, 255, 255, 255));
-			bodyLights.setPixelColor(TOP_FORWARD_INDEX, bodyLights.Color(150, 150, 150, 0));
-			bodyLights.setPixelColor(SLO_BLO_INDEX, bodyLights.Color(200, 0, 0, 0));
+			bodyLights.setPixelColor(VENT_INDEX, Adafruit_NeoPixel::Color(255, 255, 255, 255));
+			bodyLights.setPixelColor(TOP_FORWARD_INDEX, Adafruit_NeoPixel::Color(150, 150, 150, 0));
+			bodyLights.setPixelColor(SLO_BLO_INDEX, Adafruit_NeoPixel::Color(200, 0, 0, 0));
 			break;
 
 		case POWERDOWN:
 			BarGraph.clearLEDs();
 			BarGraph.initiateVariables(START);
+			
 			break;
 
 		case FIRING:
@@ -951,16 +952,4 @@ void graphUpdate(unsigned long currentMillis) {
 	default:
 		break;
 	}
-}
-
-/*  ----------------------
-	Helper Functions
------------------------ */
-// Limit with a loop around for negative changes
-int looparound(int input, int limit) {
-	while (input < 0) {
-		input += limit;
-	}
-
-	return input % limit;
 }
