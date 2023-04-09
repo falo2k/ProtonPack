@@ -118,10 +118,16 @@ unsigned long stateLastChanged;
 // POWER CELL STATE
 int powerCellLitIndex = 0;
 const int powerCellIdlePeriod = 1500;
+const int powerCellFiringPeriod = 750;
 int powerCellPeriod = 1500;
 const int powerDownPCellDecayTickPeriod = (int)(0.025 * POWERDOWN_TIME);
 unsigned long lastPowerCellChange;
 uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 150);
+const float maxPCellIndex = 0.85 * PCELL_LED_COUNT;
+float pCellMinIndex = 0.0;
+// Rate for power cell minimum to climb when firing
+const int pCellClimbPeriod = 500;
+const float pCellClimbRate = 1.0 / pCellClimbPeriod;
 
 // CYCLOTRON STATE
 int cyclotronLitIndex = 0;
@@ -137,7 +143,7 @@ const float cycloSpinDecayRate = 255.0 / lampFadeMs;
 
 uint32_t savedCyclotronValues[CYCLO_LED_COUNT];
 
-const unsigned long powerDownCycloDecayTickPeriod = (int)(0.1 * POWERDOWN_TIME);
+//const unsigned long powerDownCycloDecayTickPeriod = (int)(0.1 * POWERDOWN_TIME);
 // Decay rate for powercell shutdown in pixel value per ms.  
 // At most full lights switch off in 80% of shutdown time
 const float powerDownCycloDecayRate = (float)255 / (0.8 * POWERDOWN_TIME);
@@ -240,25 +246,19 @@ void setup() {
 void loop() {
     unsigned long currentMillis = millis();
 
+    // Process State Updates
+    stateUpdate(currentMillis);
+
     // Get any updates from wand
     cmdMessenger.feedinSerialData();
 
     // Process Switch Updates
-    updateInputs(currentMillis);
-
-    // Process State Updates
-    stateUpdate(currentMillis);
+    updateInputs(currentMillis);    
 
     // Process LED Updates
     pcellTimer.update();
     cycloTimer.update();
     ventTimer.update();
-
-    // Update the music playing state for the wand
-    // TODO: Move this into stateUpdate
-    if (state == MUSIC_MODE) {
-        cmdMessenger.sendCmd(eventUpdateMusicPlayingState, sdFXChannel.isPlaying());
-    }
 }
 
 /*  ----------------------
@@ -406,7 +406,18 @@ void onSetBluetoothMode() {
     
     bluetoothMode = arg;
 
-    // TODO: If music mode, switch off audio (if necessary), change volume on mixer channels,
+    if (state == MUSIC_MODE) {
+        if (bluetoothMode) {
+            sdFXChannel.stop();
+            audioMixer.gain(mixerChannel2, 0.0);
+            audioMixer.gain(mixerAudioInChannel, 0.5);
+        }
+        else {
+            audioMixer.gain(mixerChannel2, 0.5);
+            audioMixer.gain(mixerAudioInChannel, 0.0);
+        }
+    }
+    
     toggleBluetoothModule(bluetoothMode);
 }
 
@@ -447,9 +458,16 @@ void onStopSDTrack() {
     State Management
 ----------------------- */
 void initialiseState(State newState, unsigned long currentMillis) {
-    // TODO: State initlisation
-
     DEBUG_SERIAL.print("Initialising State: "); DEBUG_SERIAL.println((char)newState);
+
+    // Ensure we stop the music if we're coming from music mode,
+    // and make sure bluetooth module is shut down
+    if (state == MUSIC_MODE && newState != MUSIC_MODE) {
+        sdFXChannel.stop();
+        audioMixer.gain(mixerChannel2, 0.5);
+        audioMixer.gain(mixerAudioInChannel, 0.0);
+        toggleBluetoothModule(false);
+    }
 
     switch (newState) {
     case OFF:
@@ -471,18 +489,12 @@ void initialiseState(State newState, unsigned long currentMillis) {
         break;
 
     case IDLE:
-        // Ensure we stop the music if we're coming from music mode,
-        // and make sure bluetooth module is shut down
-        if (state == MUSIC_MODE) {
-            sdFXChannel.stop();
-            toggleBluetoothModule(false);
-        }
         powerCellPeriod = powerCellIdlePeriod;
         cyclotronSpinPeriod = cyclotronIdlePeriod;        
         for (int i = 0; i < CYCLO_LED_COUNT; i++) {
             lastCycloChange[i] = currentMillis;
         }
-        //cycloLights.clear();
+        pCellMinIndex = 0.0;
         cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
         pcellLights.clear();
         ventLights.clear();
@@ -492,14 +504,44 @@ void initialiseState(State newState, unsigned long currentMillis) {
         for (int i = 0; i < CYCLO_LED_COUNT; i++) {
             savedCyclotronValues[i] = cycloLights.getPixelColor(i);
         }
+
+        sdBackgroundChannel.stop();
+        sdFXChannel.play(sfxPowerDown);
         break;
 
     case FIRING:
+        pCellMinIndex = 0.0;// 0.1 * PCELL_LED_COUNT;
+        powerCellPeriod = powerCellFiringPeriod;
+
+        sdFXChannel.play(sfxFireHead);
+        sdBackgroundChannel.play(sfxFireLoop);
+        break;
+
+    case FIRING_STOP:
+        sdBackgroundChannel.stop();
+        sdBackgroundChannel.play(sfxHum);
+        sdFXChannel.play(sfxFireTail);
+        break;
+
     case FIRING_WARN:
-    case FIRING_STOP:         
         break;
         
     case VENTING:
+        for (int i = 0; i < VENT_LED_COUNT; i++) {
+            ventLights.setPixelColor(i, Adafruit_NeoPixel::Color(255, 255, 255, 255));
+        }
+        pcellLights.clear();
+        cycloLights.clear();
+
+        sdBackgroundChannel.stop();
+        sdFXChannel.play(sfxVent);
+
+        /*for (int i = 0; i < PCELL_LED_COUNT; i++) {
+            pcellLights.setPixelColor(i, pCellColour);
+        }
+        for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+            cycloLights.setPixelColor(i, cyclotronFull);
+        }*/
         break;
     
     case MUSIC_MODE:
@@ -508,7 +550,17 @@ void initialiseState(State newState, unsigned long currentMillis) {
         ventLights.clear();
         sdBackgroundChannel.stop();
         sdFXChannel.stop();
-        // TODO: Enable music mode, set appropriate mixer controls, set bluetooth if necessary
+
+        if (bluetoothMode) {
+            sdFXChannel.stop();
+            audioMixer.gain(mixerChannel2, 0.0);
+            audioMixer.gain(mixerAudioInChannel, 0.5);
+        }
+        else {
+            audioMixer.gain(mixerChannel2, 0.5);
+            audioMixer.gain(mixerAudioInChannel, 0.0);
+        }
+
         toggleBluetoothModule(bluetoothMode);
         break;
 
@@ -528,39 +580,51 @@ void initialiseState(State newState, unsigned long currentMillis) {
 unsigned long lastStateUpdate = 0;
 
 void stateUpdate(unsigned long currentMillis) {
-    // TODO: State Management
+    // TODO: State Management for audio
     switch (state) {
     case OFF:
         break;
 
     case BOOTING:
-        if (currentMillis > stateLastChanged + BOOTING_TIME) {
-            //initialiseState(IDLE, currentMillis);
+        // First check is because I cba to go back and refactor for race conditions (really I should use millis() each time rather than caching it)
+        // But if I do get a sequence wrong then the negative unsigned becomes very large!  This is just defence against my laziness.
+        if ((currentMillis > stateLastChanged) && ((currentMillis - stateLastChanged) > BOOTING_HUM_START) && (!sdBackgroundChannel.isPlaying())) {
+            sdBackgroundChannel.play(sfxHum);
         }
         break;
 
     case IDLE:
-        break;
-
-    case POWERDOWN:
-        if (currentMillis > stateLastChanged + POWERDOWN_TIME) {
-            //initialiseState(OFF, currentMillis);
+        if (!sdBackgroundChannel.isPlaying()) {
+            sdBackgroundChannel.play(sfxHum);
         }
         break;
 
-    case FIRING:
+    case POWERDOWN:        
+        break;
+
     case FIRING_WARN:
-    case FIRING_STOP:
+        if (!sdFXChannel.isPlaying()) {
+            sdFXChannel.play(sfxOverheat);
+        }
+    case FIRING:    
+        if (!sdBackgroundChannel.isPlaying()) {
+            sdBackgroundChannel.play(sfxFireLoop);
+        }
+
         cyclotronSpinPeriod = max(cyclotronMinPeriod, cyclotronSpinPeriod - ((currentMillis - lastStateUpdate) * cyclotronFiringAcceleration));
+        pCellMinIndex = min(maxPCellIndex, pCellMinIndex + (pCellClimbRate * (currentMillis - lastStateUpdate)));
+        break;
+
+    case FIRING_STOP:
         break;
 
     case VENTING:
-        if (currentMillis > stateLastChanged + VENT_TIME) {
-            //initialiseState(BOOTING, currentMillis);
-        }
         break;
 
     case MUSIC_MODE:
+        if (!bluetoothMode) {
+            cmdMessenger.sendCmd(eventUpdateMusicPlayingState, sdFXChannel.isPlaying());
+        }
         break;
 
     default:
@@ -577,6 +641,7 @@ void pcellInit() {
     lastPowerCellChange = millis();
     powerCellPeriod = powerCellIdlePeriod;
     powerCellLitIndex = 0;
+    pCellMinIndex = 0.0;
     pcellLights.clear();    
 }
 
@@ -595,10 +660,16 @@ void pcellUpdate() {
             }
 	        break;
 
+        case FIRING:
+        case FIRING_WARN:
+        case FIRING_STOP:
         case IDLE:
             if ((currentMillis - lastPowerCellChange) > (((float)powerCellPeriod) / PCELL_LED_COUNT)) {
                 if (powerCellLitIndex >= PCELL_LED_COUNT) {
-                    powerCellLitIndex = 0;
+                    powerCellLitIndex = floor(pCellMinIndex);
+
+                    //DEBUG_SERIAL.print("Reset PCell to: "); DEBUG_SERIAL.println(powerCellLitIndex);
+
                     pcellLights.clear();
                     pcellLights.show();
                 }
@@ -619,20 +690,10 @@ void pcellUpdate() {
                 }
             }
 	        break;
-
-        case FIRING:
-            // Make the period shrink over time by moving the lowest index up (to a max position)
-	        break;
-
-        case FIRING_WARN:
-	        break;
-
+        
         case VENTING:
 	        break;
-
-        case FIRING_STOP:
-	        break;
-
+                    
         case MUSIC_MODE: {
                 if (audioPeak.available()) {
                     float peak = audioPeak.read();
@@ -712,7 +773,7 @@ void cycloUpdate() {
                 // Set the current time as last update for the new lamp, and save value at time
                 lastCycloChange[cyclotronLitIndex] = currentMillis;
                 savedCyclotronValues[cyclotronLitIndex] = cycloLights.getPixelColor(cyclotronLitIndex);
-            }            
+            }
 
             // Fade non-lit lamps
             for (int i = 0; i < CYCLO_LED_COUNT; i++) {
@@ -778,5 +839,14 @@ void ventInit() {
 }
 
 void ventUpdate() {
+    unsigned long currentMillis = millis();
 
+    switch (state) {
+    case VENTING:
+        // TODO: Vent animations
+        break;
+
+    default:
+        break;
+    }
 }
