@@ -83,7 +83,7 @@ enum SerialCommands {
 	eventPlayPauseSDTrack,
 	eventStopSDTrack,	
 	// TODO: Request and save config
-	// TODO: Force State change
+	// TODO: Force State change?
 };
 
 /*  ----------------------

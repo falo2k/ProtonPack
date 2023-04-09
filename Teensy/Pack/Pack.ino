@@ -239,6 +239,10 @@ void setup() {
     // Initiate the input switches
     setupInputs();
 
+    // Set up output pins
+    pinMode(IO_1_PIN, OUTPUT); // Bluetooth control
+    digitalWrite(IO_1_PIN, LOW);
+
     DEBUG_SERIAL.println("setup() Complete");
 }
 
@@ -362,7 +366,13 @@ boolean setvolume(int8_t v) {
 }
 
 void toggleBluetoothModule(bool state) {
-    // TODO: Bluetooth module management
+    DEBUG_SERIAL.print("Switching Bluetooth Module: "); DEBUG_SERIAL.println(state);
+    if (state) {
+        digitalWrite(IO_1_PIN, HIGH);
+    }
+    else {
+        digitalWrite(IO_1_PIN, LOW);
+    }
 }
 
 /*  ----------------------
@@ -580,7 +590,6 @@ void initialiseState(State newState, unsigned long currentMillis) {
 unsigned long lastStateUpdate = 0;
 
 void stateUpdate(unsigned long currentMillis) {
-    // TODO: State Management for audio
     switch (state) {
     case OFF:
         break;
