@@ -122,7 +122,6 @@ unsigned long lastBarrelChange;
 
 const float powerDownLEDDecayRate = (float)255 / (0.8 * POWERDOWN_TIME);
 
-
 const int numFiringLEDColours = 10;
 const uint32_t firingLEDColours[numFiringLEDColours] = {
 	Adafruit_NeoPixel::Color(0,0,0,0),
@@ -136,6 +135,8 @@ const uint32_t firingLEDColours[numFiringLEDColours] = {
 	Adafruit_NeoPixel::Color(0,0,175,100),
 	Adafruit_NeoPixel::Color(0,0,0,50)
 };
+
+const int firingBlinkMS = 750;
 
 /*  ----------------------
 	Setup and Loops
@@ -691,17 +692,28 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			break;
 
 		case BOOTING:			
+			tipLights.clear();
+			bodyLights.clear();
+			barrelLights.clear();
+
 			BarGraph.initiateVariables(ACTIVE);			
 			//BarGraph.clearLEDs();
 			break;
 
 		case IDLE:
 			BarGraph.clearLEDs();
-			BarGraph.initiateVariables(START);			
+			BarGraph.initiateVariables(START);
+			if (overheatMode) {
+				tipLights.setPixelColor(0, Adafruit_NeoPixel::Color(0, 0, 0, 150));
+				lastTipChange = currentMillis;
+			}
 			// Vent light to max, top forward light on (mid brightness), slo-blo to red
-			bodyLights.setPixelColor(VENT_INDEX, Adafruit_NeoPixel::Color(255, 255, 255, 255));
+			bodyLights.setPixelColor(VENT_INDEX, Adafruit_NeoPixel::Color(0, 0, 0, 255));
 			bodyLights.setPixelColor(TOP_FORWARD_INDEX, Adafruit_NeoPixel::Color(150, 150, 150, 0));
-			bodyLights.setPixelColor(SLO_BLO_INDEX, Adafruit_NeoPixel::Color(200, 0, 0, 0));
+			bodyLights.setPixelColor(SLO_BLO_INDEX, Adafruit_NeoPixel::Color(255, 0, 0, 0));
+			lastBodyChange[VENT_INDEX] = currentMillis;
+			lastBodyChange[TOP_FORWARD_INDEX] = currentMillis;
+			lastBodyChange[SLO_BLO_INDEX] = currentMillis;
 			break;
 
 		case POWERDOWN:
@@ -725,19 +737,22 @@ void initialiseState(State newState, unsigned long currentMillis) {
 
 		case FIRING_WARN:
 			// Bargraph should continue from previous
+			// Set rear top to orange
+			bodyLights.setPixelColor(TOP_BACK_INDEX, Adafruit_NeoPixel::Color(255, 140, 0, 0));
+			lastBodyChange[TOP_BACK_INDEX] = currentMillis;
 			break;
 
 		case VENTING:
 			tipLights.clear();
 			bodyLights.clear();
 			barrelLights.clear();
-			//BarGraph.clearLEDs();
+			BarGraph.clearLEDs();
 			BarGraph.initiateVariables(BGVENT);
 			break;
 
 		case FIRING_STOP:
-			tipLights.clear();
-			bodyLights.clear();
+			bodyLights.setPixelColor(TOP_FORWARD_INDEX, Adafruit_NeoPixel::Color(150, 150, 150, 0));
+			lastBodyChange[TOP_FORWARD_INDEX] = currentMillis;
 			barrelLights.clear();
 			// Bargraph should continue from previous
 			break;
@@ -928,9 +943,11 @@ void bodyUpdate() {
 		break;
 
 	case BOOTING:{
-			int ventIntensity = 255 * (((float)(max(stateLastChanged, currentMillis) - stateLastChanged)) / BOOTING_TIME);
-			bodyLights.setPixelColor(VENT_INDEX, Adafruit_NeoPixel::Color(0, 0, 0, ventIntensity));
+			int lightIntensity = 255 * (((float)(max(stateLastChanged, currentMillis) - stateLastChanged)) / BOOTING_TIME);
+			bodyLights.setPixelColor(VENT_INDEX, Adafruit_NeoPixel::Color(0, 0, 0, lightIntensity));
+			bodyLights.setPixelColor(SLO_BLO_INDEX, Adafruit_NeoPixel::Color(lightIntensity, 0, 0, 0));
 			lastBodyChange[VENT_INDEX] = currentMillis;
+			lastBodyChange[SLO_BLO_INDEX] = currentMillis;
 
 			bodyLights.show();
 		}
@@ -956,10 +973,16 @@ void bodyUpdate() {
 		}
 		break;
 
-	case FIRING:
-		break;
-
 	case FIRING_WARN:
+	case FIRING: {
+		unsigned long timeSinceFiringStart = max(currentMillis, stateLastChanged) - stateLastChanged;
+		bool topLEDLit = (timeSinceFiringStart % (2 * firingBlinkMS)) < firingBlinkMS;
+		bodyLights.setPixelColor(TOP_FORWARD_INDEX, topLEDLit ? Adafruit_NeoPixel::Color(150, 150, 150, 0) : Adafruit_NeoPixel::Color(0, 0, 0, 0));
+		bodyLights.setPixelColor(FRONT_INDEX, topLEDLit ? Adafruit_NeoPixel::Color(0, 0, 0, 0) : Adafruit_NeoPixel::Color(150, 150, 150, 0));
+		lastBodyChange[TOP_FORWARD_INDEX] = currentMillis;
+		lastBodyChange[FRONT_INDEX] = currentMillis;
+		bodyLights.show();
+	}
 		break;
 
 	case VENTING:
@@ -1028,9 +1051,12 @@ void tipUpdate() {
 			break;
 
 		case BOOTING:
-			break;
-
-		case IDLE:
+			if (overheatMode) {
+				int lightIntensity = 150 * (((float)(max(stateLastChanged, currentMillis) - stateLastChanged)) / BOOTING_TIME);
+				tipLights.setPixelColor(0, Adafruit_NeoPixel::Color(0, 0, 0, lightIntensity));
+				lastTipChange = currentMillis;
+				tipLights.show();
+			}
 			break;
 
 		case POWERDOWN: {
@@ -1048,16 +1074,18 @@ void tipUpdate() {
 			}
 			break;
 
-		case FIRING:
-			break;
-
+		case IDLE:
+		case FIRING_STOP:
 		case FIRING_WARN:
+		case FIRING:
+			if (overheatMode) {
+				tipLights.setPixelColor(0, Adafruit_NeoPixel::Color(0, 0, 0, 150));
+				lastTipChange = currentMillis;
+				tipLights.show();
+			}
 			break;
 
 		case VENTING:
-			break;
-
-		case FIRING_STOP:
 			break;
 
 		case MUSIC_MODE:
