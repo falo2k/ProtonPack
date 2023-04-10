@@ -11,9 +11,9 @@ const char* trackList[][2] = { //XXXXXX20CHARXXXXXXXX
 	{"MUSIC/SAVIN.WAV",			"Savin' The Day"},
 	{"MUSIC/TITLE.WAV",			"Main Title Theme"}, 
 	{"MUSIC/MAGICCUT.WAV",		"Magic (Cut Version)"}, 
-	{"MUSIC/MAGICCUT.WAV",		"Magic (Full Version)"}, 
+	{"MUSIC/MAGIC.WAV",	     	"Magic (Full Version)"}, 
 	{"MUSIC/RGBTHEME.WAV",		"Real Ghostbusters"}, 
-	{"MUSIC/INSTRUMENTAL.WAV",	"Instrumental Theme"},
+	{"MUSIC/INSTRUM.WAV",   	"Instrumental Theme"},
 	{"MUSIC/HIGHER.WAV",		"Higher and Higher"},
 	{"MUSIC/ONOUROWN.WAV",		"On Our Own"}, 
 	{"MUSIC/BUSTIN.WAV",		"Bustin'"},
@@ -123,6 +123,17 @@ uint32_t colourInterpolate(uint32_t c1, uint32_t c2, int step, int totalSteps) {
 		(c1g * (totalSteps - step) + c2g * step) / totalSteps,
 		(c1b * (totalSteps - step) + c2b * step) / totalSteps,
 		(c1w * (totalSteps - step) + c2w * step) / totalSteps));
+}
+
+
+// Lazy colour multiplication - will max out anything that clips
+uint32_t colourMultiply(uint32_t c, float multiplier) {
+	return Adafruit_NeoPixel::Color(
+		min(255, Red(c) * multiplier),
+		min(255, Green(c) * multiplier),
+		min(255, Blue(c) * multiplier),
+		min(255, White(c) * multiplier)
+	);
 }
 
 // Return color, dimmed by 75%

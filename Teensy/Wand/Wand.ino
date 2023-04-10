@@ -609,6 +609,7 @@ void rotaryMove(unsigned long currentMillis, int movement) {
 
 			case VOLUME_CHANGE:
 				selectedIndex = constrain(selectedIndex + movement, 0, maxvol);
+				setVolume(currentMillis, selectedIndex);
 				break;
 
 			case TRACK_SELECT:

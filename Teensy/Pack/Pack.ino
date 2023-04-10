@@ -122,12 +122,14 @@ const int powerCellFiringPeriod = 750;
 int powerCellPeriod = 1500;
 const int powerDownPCellDecayTickPeriod = (int)(0.025 * POWERDOWN_TIME);
 unsigned long lastPowerCellChange;
-uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 150);
+const uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 250);
 const float maxPCellIndex = 0.85 * PCELL_LED_COUNT;
 float pCellMinIndex = 0.0;
 // Rate for power cell minimum to climb when firing
 const int pCellClimbPeriod = 500;
 const float pCellClimbRate = 1.0 / pCellClimbPeriod;
+
+const float peakMultiplier = 1.5;
 
 // CYCLOTRON STATE
 int cyclotronLitIndex = 0;
@@ -140,6 +142,12 @@ int cyclotronSpinPeriod = 4000;
 // Rate for cyclotron lamps to fade under normal operation
 const int lampFadeMs = 250;
 const float cycloSpinDecayRate = 255.0 / lampFadeMs;
+
+// Scaling used for audio visualisation
+const float fftMultiplier = 2;
+const float fftExponent = 0.25;
+const float rmsMultiplier = 3;
+const float rmsExponent = 0.5;
 
 uint32_t savedCyclotronValues[CYCLO_LED_COUNT];
 
@@ -196,6 +204,7 @@ void setup() {
     sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
     //sgtl5000_1.unmuteLineout();
     //sgtl5000_1.lineOutLevel(21);
+    audioFFT.averageTogether(25);
 
     // Ensure the mono-mixer maxes out at 1
     audioInMonoMix.gain(0, 0.5);
@@ -358,7 +367,7 @@ boolean setvolume(int8_t v) {
     DEBUG_SERIAL.println(v);
     Wire.beginTransmission(MAX9744_I2CADDR);
     Wire.write(v);
-    DEBUG_SERIAL.print("Volume Set");
+    DEBUG_SERIAL.println("Volume Set");
     if (Wire.endTransmission() == 0)
         return true;
     else
@@ -704,19 +713,49 @@ void pcellUpdate() {
 	        break;
                     
         case MUSIC_MODE: {
-                if (audioPeak.available()) {
+                /*if (audioPeak.available()) {
                     float peak = audioPeak.read();
                     float peakMultiplier = 1.5;
                     
                     powerCellLitIndex = floor(peakMultiplier * peak * PCELL_LED_COUNT);
                     pcellLightTo(powerCellLitIndex, false);
-                    if (powerCellLitIndex < PCELL_LED_COUNT) {
+                    if (powerCellLitIndex < PCELL_LED_COUNT - 1) {
                         float remainder = 0.01 * (((int) (peakMultiplier * peak * PCELL_LED_COUNT * 100.0)) % 100);
                         pcellLights.setPixelColor(powerCellLitIndex + 1, Adafruit_NeoPixel::Color(0, 0, floor(remainder * 255), floor(remainder * 100)));
                     }
                     pcellLights.show();
+                    lastPowerCellChange = currentMillis;
+                }*/
+                if (audioPeak.available()) {
+                    float peak = audioPeak.read();
+                    
+
+                    powerCellLitIndex = floor(peakMultiplier * peak * PCELL_LED_COUNT);
+                    pcellLights.clear();
+
+                    for (int i = 0; i <= powerCellLitIndex; i++) {
+                        pcellLights.setPixelColor(i, 
+                            Adafruit_NeoPixel::Color(
+                                0,
+                                255 * pow(((float)(PCELL_LED_COUNT - i)/PCELL_LED_COUNT),0.2),
+                                100 * pow(((float)(i) / PCELL_LED_COUNT),2)
+                            ));
+                    }
+
+                    if (powerCellLitIndex < PCELL_LED_COUNT - 1) {
+                        float remainder = 0.01 * (((int)(peakMultiplier * peak * PCELL_LED_COUNT * 100.0)) % 100);
+                        int i = powerCellLitIndex + 1;
+
+                        pcellLights.setPixelColor(i,
+                            colourMultiply(Adafruit_NeoPixel::Color(
+                                0,
+                                255 * ((PCELL_LED_COUNT - i) / PCELL_LED_COUNT),
+                                100 * ((i + 1) / PCELL_LED_COUNT)
+                            ), remainder));
+                    }
+                    pcellLights.show();
+                    lastPowerCellChange = currentMillis;
                 }
-                lastPowerCellChange = currentMillis;
             }
 	        break;
 
@@ -824,14 +863,41 @@ void cycloUpdate() {
         break;
             
     case MUSIC_MODE: {
-            if (audioRMS.available()) {
+            /*if (audioRMS.available()) {
                 float rms = audioRMS.read();
                 int brightness = min(255,255 * rms * 2);
                 for (int i = 0; i < CYCLO_LED_COUNT; i++) {
                     cycloLights.setPixelColor(i, Adafruit_NeoPixel::Color(brightness, 0, 0));
                 }
                 cycloLights.show();
+            }*/
+            if (audioFFT.available() && audioRMS.available()) {
+                double band[4] = {
+                min(1,pow(audioFFT.read(2, 6) * fftMultiplier, fftExponent)),
+                min(1,pow(audioFFT.read(7, 19) * fftMultiplier, fftExponent)),
+                min(1, pow(audioFFT.read(20, 52) * fftMultiplier, fftExponent)),
+                min(1, pow(audioFFT.read(53, 127) * fftMultiplier, fftExponent))
+                };
+                
+                double rms = min(1, pow(audioRMS.read() * rmsMultiplier, rmsExponent));
+
+                /*char output[64];
+                sprintf(output, "FFT: %0.2f,%0.2f,%0.2f,%0.2f | RMS: %0.2f", band1, band2, band3, band4, rms);
+                DEBUG_SERIAL.println(output);*/
+
+                for (int i = 0; i < 4; i++) {
+                    cycloLights.setPixelColor(i,
+                        colourMultiply(Adafruit_NeoPixel::Color(
+                            255 * rms,
+                            255 * (1 - rms),
+                            0,
+                            0
+                        ), band[i]));
+                }
+                cycloLights.show();
             }
+
+
         }
         break;
 
