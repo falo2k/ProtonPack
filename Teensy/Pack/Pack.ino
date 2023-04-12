@@ -30,8 +30,8 @@ int cyclotronDirection = 1;
 // Switches
 const int ION_SWITCH_PIN = 22;
 const int ROT_BTN_PIN = 9;
-const int ROT_ENC_A_PIN = 2;
-const int ROT_ENC_B_PIN = 4;
+const int ROT_ENC_A_PIN = 4;
+const int ROT_ENC_B_PIN = 2;
 
 const int IO_1_PIN = 5;
 const int IO_2_PIN = 3;
@@ -156,16 +156,10 @@ uint32_t savedCyclotronValues[CYCLO_LED_COUNT];
 // At most full lights switch off in 80% of shutdown time
 const float powerDownCycloDecayRate = (float)255 / (0.8 * POWERDOWN_TIME);
 
-const int cyclotronLowR = 25;
-const int cyclotronLowG = 0;
-const int cyclotronLowB = 0;
-const int cyclotronLowW = 0;
-const int cyclotronFullR = 255;
-const int cyclotronFullG = 0;
-const int cyclotronFullB = 0;
-const int cyclotronFullW = 0;
-uint32_t cyclotronLow = Adafruit_NeoPixel::Color(cyclotronLowR, cyclotronLowG, cyclotronLowB, cyclotronLowW);
-uint32_t cyclotronFull = Adafruit_NeoPixel::Color(cyclotronFullR, cyclotronFullG, cyclotronFullB, cyclotronFullW);
+uint32_t cyclotronFull = Adafruit_NeoPixel::Color(255, 0, 0, 0);
+uint32_t cyclotronOverheat = Adafruit_NeoPixel::Color(255, 0, 0, 10);
+
+uint32_t ventColour = Adafruit_NeoPixel::Color(255, 255, 255, 255);
 
 /*  ----------------------
     Setup and Loops
@@ -293,6 +287,7 @@ void updateInputs(unsigned long currentMillis) {
     // Handle Rotary Encoder Movements
     int newRotaryPosition = ROTARY.read();
     if (abs(newRotaryPosition - lastRotaryPosition) >= 4) {
+        DEBUG_SERIAL.print("Rotary Position: "); DEBUG_SERIAL.println(newRotaryPosition);
         int movement = rotaryDirection * round(0.25 * (newRotaryPosition - lastRotaryPosition));
         lastRotaryPosition = newRotaryPosition;
 
@@ -435,9 +430,9 @@ void onSetBluetoothMode() {
             audioMixer.gain(mixerChannel2, 0.5);
             audioMixer.gain(mixerAudioInChannel, 0.0);
         }
+
+        toggleBluetoothModule(bluetoothMode);
     }
-    
-    toggleBluetoothModule(bluetoothMode);
 }
 
 void onSetSDTrack() {
@@ -547,20 +542,14 @@ void initialiseState(State newState, unsigned long currentMillis) {
         
     case VENTING:
         for (int i = 0; i < VENT_LED_COUNT; i++) {
-            ventLights.setPixelColor(i, Adafruit_NeoPixel::Color(255, 255, 255, 255));
+            ventLights.setPixelColor(i, ventColour);
         }
-        pcellLights.clear();
-        cycloLights.clear();
+        for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+            cycloLights.setPixelColor(i, cyclotronOverheat);
+        }
 
         sdBackgroundChannel.stop();
         sdFXChannel.play(sfxVent);
-
-        /*for (int i = 0; i < PCELL_LED_COUNT; i++) {
-            pcellLights.setPixelColor(i, pCellColour);
-        }
-        for (int i = 0; i < CYCLO_LED_COUNT; i++) {
-            cycloLights.setPixelColor(i, cyclotronFull);
-        }*/
         break;
     
     case MUSIC_MODE:
@@ -709,23 +698,23 @@ void pcellUpdate() {
             }
 	        break;
         
-        case VENTING:
-	        break;
+        case VENTING: {
+                unsigned long timeSinceVent = max(currentMillis, stateLastChanged) - stateLastChanged;
+                if (timeSinceVent < VENT_LIGHT_FADE_TIME) {
+                    for (int i = 0; i < powerCellLitIndex; i++) {
+                        pcellLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(pCellColour, (float)timeSinceVent / VENT_LIGHT_FADE_TIME)));
+                    }
+                }
+                else {
+                    pcellLights.clear();
+                }
+                
+                lastPowerCellChange = currentMillis;
+                pcellLights.show();
+            }
+            break;
                     
         case MUSIC_MODE: {
-                /*if (audioPeak.available()) {
-                    float peak = audioPeak.read();
-                    float peakMultiplier = 1.5;
-                    
-                    powerCellLitIndex = floor(peakMultiplier * peak * PCELL_LED_COUNT);
-                    pcellLightTo(powerCellLitIndex, false);
-                    if (powerCellLitIndex < PCELL_LED_COUNT - 1) {
-                        float remainder = 0.01 * (((int) (peakMultiplier * peak * PCELL_LED_COUNT * 100.0)) % 100);
-                        pcellLights.setPixelColor(powerCellLitIndex + 1, Adafruit_NeoPixel::Color(0, 0, floor(remainder * 255), floor(remainder * 100)));
-                    }
-                    pcellLights.show();
-                    lastPowerCellChange = currentMillis;
-                }*/
                 if (audioPeak.available()) {
                     float peak = audioPeak.read();
                     
@@ -735,11 +724,11 @@ void pcellUpdate() {
 
                     for (int i = 0; i <= powerCellLitIndex; i++) {
                         pcellLights.setPixelColor(i, 
-                            Adafruit_NeoPixel::Color(
+                            Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::Color(
                                 0,
                                 255 * pow(((float)(PCELL_LED_COUNT - i)/PCELL_LED_COUNT),0.2),
                                 100 * pow(((float)(i) / PCELL_LED_COUNT),2)
-                            ));
+                            )));
                     }
 
                     if (powerCellLitIndex < PCELL_LED_COUNT - 1) {
@@ -747,11 +736,11 @@ void pcellUpdate() {
                         int i = powerCellLitIndex + 1;
 
                         pcellLights.setPixelColor(i,
-                            colourMultiply(Adafruit_NeoPixel::Color(
+                            Adafruit_NeoPixel::gamma32(colourMultiply(Adafruit_NeoPixel::Color(
                                 0,
                                 255 * ((PCELL_LED_COUNT - i) / PCELL_LED_COUNT),
                                 100 * ((i + 1) / PCELL_LED_COUNT)
-                            ), remainder));
+                            ), remainder)));
                     }
                     pcellLights.show();
                     lastPowerCellChange = currentMillis;
@@ -798,7 +787,7 @@ void cycloUpdate() {
     case BOOTING:{
             float cycloIntensity = ((float) (max(stateLastChanged, currentMillis) - stateLastChanged)) / BOOTING_TIME;
             for (int i = 0; i < CYCLO_LED_COUNT; i++) {                
-                cycloLights.setPixelColor(i, Adafruit_NeoPixel::Color((int)(cycloIntensity * cyclotronFullR), (int)(cycloIntensity * cyclotronFullG), (int)(cycloIntensity * cyclotronFullB), (int)(cycloIntensity * cyclotronFullW)));
+                cycloLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(cyclotronFull, cycloIntensity)));
                 lastCycloChange[i] = currentMillis;
             }
 
@@ -828,12 +817,12 @@ void cycloUpdate() {
                 if (i != cyclotronLitIndex) {
                     unsigned long timeSinceLastChange = max(currentMillis, lastCycloChange[i]) - lastCycloChange[i];
                     cycloLights.setPixelColor(i,
-                        Adafruit_NeoPixel::Color(
+                        Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::Color(
                             max(0, Red(savedCyclotronValues[i]) - ((int)(cycloSpinDecayRate * timeSinceLastChange))),
                             max(0, Green(savedCyclotronValues[i]) - ((int)(cycloSpinDecayRate * timeSinceLastChange))),
                             max(0, Blue(savedCyclotronValues[i]) - ((int)(cycloSpinDecayRate * timeSinceLastChange))),
                             max(0, White(savedCyclotronValues[i]) - ((int)(cycloSpinDecayRate * timeSinceLastChange)))
-                        )
+                        ))
                     );
                 }
             }
@@ -846,12 +835,12 @@ void cycloUpdate() {
             unsigned long timeSinceShutdown = max(currentMillis, stateLastChanged) - stateLastChanged;
             for (int i = 0; i < CYCLO_LED_COUNT; i++) {
                 cycloLights.setPixelColor(i,
-                    Adafruit_NeoPixel::Color(
+                    Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::Color(
                         max(0,Red(savedCyclotronValues[i]) - ((int)(powerDownCycloDecayRate * timeSinceShutdown))),
                         max(0, Green(savedCyclotronValues[i]) - ((int)(powerDownCycloDecayRate * timeSinceShutdown))),
                         max(0, Blue(savedCyclotronValues[i]) - ((int)(powerDownCycloDecayRate * timeSinceShutdown))),
                         max(0, White(savedCyclotronValues[i]) - ((int)(powerDownCycloDecayRate * timeSinceShutdown)))
-                    )
+                    ))
                 );
                 lastCycloChange[i] = currentMillis;
             }
@@ -859,18 +848,24 @@ void cycloUpdate() {
         }
         break;
 
-    case VENTING:
+    case VENTING: {
+            unsigned long timeSinceVent = max(currentMillis, stateLastChanged) - stateLastChanged;
+            if (timeSinceVent < VENT_LIGHT_FADE_TIME) {
+                for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+                    cycloLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(cyclotronOverheat, (float)timeSinceVent / VENT_LIGHT_FADE_TIME)));
+                }
+            }
+            else {
+                cycloLights.clear();
+            }
+            for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+                lastCycloChange[i] = currentMillis;
+            }
+            cycloLights.show();
+        }
         break;
             
     case MUSIC_MODE: {
-            /*if (audioRMS.available()) {
-                float rms = audioRMS.read();
-                int brightness = min(255,255 * rms * 2);
-                for (int i = 0; i < CYCLO_LED_COUNT; i++) {
-                    cycloLights.setPixelColor(i, Adafruit_NeoPixel::Color(brightness, 0, 0));
-                }
-                cycloLights.show();
-            }*/
             if (audioFFT.available() && audioRMS.available()) {
                 double band[4] = {
                 min(1,pow(audioFFT.read(2, 6) * fftMultiplier, fftExponent)),
@@ -887,12 +882,12 @@ void cycloUpdate() {
 
                 for (int i = 0; i < 4; i++) {
                     cycloLights.setPixelColor(i,
-                        colourMultiply(Adafruit_NeoPixel::Color(
+                        Adafruit_NeoPixel::gamma32(colourMultiply(Adafruit_NeoPixel::Color(
                             255 * rms,
                             255 * (1 - rms),
                             0,
                             0
-                        ), band[i]));
+                        ), band[i])));
                 }
                 cycloLights.show();
             }

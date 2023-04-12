@@ -30,6 +30,7 @@ const int defaultTrack = 0;
 #define OVERHEAT_TIME 7500
 #define FIRING_WARN_TIME 5000
 #define FIRING_STOP_TIME 2500
+#define VENT_LIGHT_FADE_TIME 500
 #define VENT_TIME 3000
 
 // Tracks (comments are ms length)
@@ -49,6 +50,8 @@ const char* sfxVent = "SFX/vent.wav"; // 3495
 
 int8_t thevol = 31;
 int8_t maxvol = 63;
+
+const uint32_t ledOff = Adafruit_NeoPixel::Color(0, 0, 0, 0);
 
 enum State { OFF = 'O',
 	BOOTING = 'B',
@@ -151,6 +154,37 @@ int looparound(int input, int limit) {
 
 	return input % limit;
 }
+
+const uint8_t bgIndexes[28][2] = {
+  {0, 0},
+  {1, 0},
+  {2, 0},
+  {3, 0},
+  {0, 1},
+  {1, 1},
+  {2, 1},
+  {3, 1},
+  {0, 2},
+  {1, 2},
+  {2, 2},
+  {3, 2},
+  {0, 3},
+  {1, 3},
+  {2, 3},
+  {3, 3},
+  {0, 4},
+  {1, 4},
+  {2, 4},
+  {3, 4},
+  {0, 5},
+  {1, 5},
+  {2, 5},
+  {3, 5},
+  {0, 6},
+  {1, 6},
+  {2, 6},
+  {3, 6},
+};
 
 
 //switch (state) {
