@@ -65,6 +65,8 @@ enum State { OFF = 'O',
 
 enum ButtonEvent { PRESSED, HELD, RELEASED };
 
+enum displayStates { DISPLAY_OFF, TOP_MENU, VOLUME_CHANGE, VOLUME_DISPLAY, TRACK_SELECT, TRACK_DISPLAY, VENTMODE, INPUTSTATE, BOOT_LOGO, SAVE_SETTINGS };
+
 // Hardware Serial Comms 
 // inintialize hardware constants
 const long BAUDRATE = 9600; // speed of serial connection

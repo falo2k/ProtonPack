@@ -93,8 +93,6 @@ int barrelPeriod = 50;
 /*  ----------------------
 	State control
 ----------------------- */
-
-enum displayStates { DISPLAY_OFF, TOP_MENU, VOLUME_CHANGE, VOLUME_DISPLAY, TRACK_SELECT, TRACK_DISPLAY, VENTMODE, INPUTSTATE, BOOT_LOGO, SAVE_SETTINGS };
 int selectedIndex = 0;
 displayStates displayState;
 
