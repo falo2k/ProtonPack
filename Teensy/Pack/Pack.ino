@@ -126,7 +126,7 @@ const uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 250);
 const float maxPCellIndex = 0.85 * PCELL_LED_COUNT;
 float pCellMinIndex = 0.0;
 // Rate for power cell minimum to climb when firing
-const int pCellClimbPeriod = 500;
+const int pCellClimbPeriod = 1000;
 const float pCellClimbRate = 1.0 / pCellClimbPeriod;
 
 const float peakMultiplier = 1.5;
@@ -505,12 +505,12 @@ void initialiseState(State newState, unsigned long currentMillis) {
     case IDLE:
         powerCellPeriod = powerCellIdlePeriod;
         cyclotronSpinPeriod = cyclotronIdlePeriod;        
-        for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+        /*for (int i = 0; i < CYCLO_LED_COUNT; i++) {
             lastCycloChange[i] = currentMillis;
-        }
+        }*/
         pCellMinIndex = 0.0;
-        cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
-        pcellLights.clear();
+        //cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
+        //pcellLights.clear();
         ventLights.clear();
         break;
 
@@ -618,11 +618,13 @@ void stateUpdate(unsigned long currentMillis) {
             sdBackgroundChannel.play(sfxFireLoop);
         }
 
-        cyclotronSpinPeriod = max(cyclotronMinPeriod, cyclotronSpinPeriod - ((currentMillis - lastStateUpdate) * cyclotronFiringAcceleration));
+        cyclotronSpinPeriod = max(cyclotronMinPeriod, cyclotronSpinPeriod - (cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
         pCellMinIndex = min(maxPCellIndex, pCellMinIndex + (pCellClimbRate * (currentMillis - lastStateUpdate)));
         break;
 
     case FIRING_STOP:
+        cyclotronSpinPeriod = min(cyclotronIdlePeriod, cyclotronSpinPeriod + (5 * cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
+        pCellMinIndex = max(0.0, pCellMinIndex - (5 * pCellClimbRate * (currentMillis - lastStateUpdate)));
         break;
 
     case VENTING:
@@ -674,16 +676,11 @@ void pcellUpdate() {
             if ((currentMillis - lastPowerCellChange) > (((float)powerCellPeriod) / PCELL_LED_COUNT)) {
                 if (powerCellLitIndex >= PCELL_LED_COUNT) {
                     powerCellLitIndex = floor(pCellMinIndex);
-
-                    //DEBUG_SERIAL.print("Reset PCell to: "); DEBUG_SERIAL.println(powerCellLitIndex);
-
-                    pcellLights.clear();
-                    pcellLights.show();
-                }
-                else {
-                    pcellLightTo(powerCellLitIndex);
+                } 
+                else {                    
                     powerCellLitIndex++;
                 }
+                pcellLightTo(powerCellLitIndex);
                 lastPowerCellChange = currentMillis;
             }
 	        break;
@@ -798,6 +795,7 @@ void cycloUpdate() {
         case FIRING:
         case FIRING_WARN:
         case FIRING_STOP:
+            // TODO: Need some special handlign with firing stop to slow down the cyclotron and power cell
         case IDLE: {
             // Move the lit lamp if we hit the period change
             if ((currentMillis - lastCycloChange[cyclotronLitIndex]) > (((float)cyclotronSpinPeriod) / CYCLO_LED_COUNT)) {
