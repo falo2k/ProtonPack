@@ -801,6 +801,10 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			bodyLights.clear();
 			barrelLights.clear();
 			clearBargraph(currentMillis);
+
+			// Update the track number on the Pack.  Note this is really just used in testing
+			// When I have been starting each component out of sync
+			setSDTrack(currentMillis, trackNumber);
 			break;
 
 		default:

@@ -143,10 +143,11 @@ const int lampFadeMs = 250;
 const float cycloSpinDecayRate = 255.0 / lampFadeMs;
 
 // Scaling used for audio visualisation
-const float fftMultiplier = 1;
-const float fftExponent = 0.25;
-const float rmsMultiplier = 3;
-const float rmsExponent = 0.5;
+const float fftMultiplier = 2;
+const float fftExponent = 0.5;
+const float fftThreshold = 0.02;
+const float rmsMultiplier = 4;
+const float rmsExponent = 1;
 
 uint32_t savedCyclotronValues[CYCLO_LED_COUNT];
 
@@ -197,6 +198,7 @@ void setup() {
     //sgtl5000_1.unmuteLineout();
     //sgtl5000_1.lineOutLevel(21);
     audioFFT.averageTogether(10);
+    //audioFFT.windowFunction(NULL);
 
     // Ensure the mono-mixer maxes out at 1
     audioInMonoMix.gain(0, 0.5);
@@ -867,13 +869,27 @@ void cycloUpdate() {
     case MUSIC_MODE: {
             if (audioFFT.available() && audioRMS.available()) {
                 double band[4] = {
-                min(1,pow(audioFFT.read(2, 6) * fftMultiplier, fftExponent)),
-                min(1,pow(audioFFT.read(7, 19) * fftMultiplier, fftExponent)),
-                min(1, pow(audioFFT.read(20, 52) * fftMultiplier, fftExponent)),
-                min(1, pow(audioFFT.read(53, 127) * fftMultiplier, fftExponent))
+                audioFFT.read(1, 3),
+                audioFFT.read(4, 12),
+                audioFFT.read(13, 40),
+                audioFFT.read(41, 127)
                 };
+
+                // Do some cleanup and transformation on the fft readings to both
+                // limit low readings and then scale up a bit
+                for (int i = 0; i < 4; i++) {
+                    if (band[i] < fftThreshold) {
+                        band[i] = 0;
+                    }
+                    else {
+                        band[i] = min(1, fftMultiplier * pow(band[i], fftExponent));
+                    }
+                }
                 
+                // Tweak the RMS value to skew higher
                 double rms = min(1, pow(audioRMS.read() * rmsMultiplier, rmsExponent));
+
+                //DEBUG_SERIAL.printf("Bands: %0.2f,%0.2f,%0.2f,%0.2f RMS: %0.2f\n", band[0], band[1], band[2], band[3], rms);
 
                 // Green, Yellow, Red Based on RMS
                 /*for (int i = 0; i < 4; i++) {
