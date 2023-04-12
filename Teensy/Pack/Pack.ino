@@ -588,8 +588,6 @@ void initialiseState(State newState, unsigned long currentMillis) {
 
 unsigned long lastStateUpdate = 0;
 
-unsigned long tempCheck = 0;
-
 void stateUpdate(unsigned long currentMillis) {
     switch (state) {
     case OFF:
@@ -626,11 +624,6 @@ void stateUpdate(unsigned long currentMillis) {
         break;
 
     case FIRING_STOP:
-        if (currentMillis - tempCheck > 250) {
-            DEBUG_SERIAL.print("Cyclo Spin: "); DEBUG_SERIAL.print(cyclotronSpinPeriod); DEBUG_SERIAL.print("/"); DEBUG_SERIAL.println(cyclotronIdlePeriod);
-            DEBUG_SERIAL.print("pCellMinIndex Spin: "); DEBUG_SERIAL.println(pCellMinIndex);
-            tempCheck = currentMillis;
-        }
         cyclotronSpinPeriod = min(cyclotronIdlePeriod, cyclotronSpinPeriod + (100 * cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
         pCellMinIndex = max(0.0, pCellMinIndex - (3 * pCellClimbRate * (currentMillis - lastStateUpdate)));
         break;
