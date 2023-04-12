@@ -138,12 +138,15 @@ const uint32_t sloBloColour = Adafruit_NeoPixel::Color(255, 0, 0, 0);
 const int bargraphLEDs = 28;
 int bargraphLitCells = 0;
 bool bargraphClimbing = true;
-const int bargraphIdlePeriod = 1500;
-int bargraphPeriod = 1500;
+const unsigned int bargraphIdlePeriod = 1500;
+unsigned int bargraphPeriod = 1500;
 
-const int powerDownBargraphDecayPeriod = (int)((float)bargraphLitCells * POWERDOWN_TIME / bargraphLEDs);
 unsigned long lastBargraphChange;
 int bargraphCache[bargraphLEDs];
+
+const unsigned int bargraphFiringMinPeriod = 100;
+const int bargraphFiringWidth = 3;
+const float bargraphFiringAcceleration = 0.05;
 
 /*  ----------------------
 	Setup and Loops
@@ -229,13 +232,16 @@ void loop() {
 /*  ----------------------
 	Bargraph Helper Functions
 ----------------------- */
-void setBGLamp(unsigned long currentMillis, int index) {
-	setBGLamp(currentMillis, index, true);
+void setBGLamp(unsigned long currentMillis, int bar) {
+	setBGLamp(currentMillis, bar, true);
 }
 
-void setBGLamp(unsigned long currentMillis, int index, bool state) {
-	bargraph.setPixel(bgIndexes[index][0], bgIndexes[index][1], state ? 1 : 0);
-	bargraphCache[index] = state ? 1 : 0;
+void setBGLamp(unsigned long currentMillis, int bar, bool state) {
+	if (bar == 0) {
+		return;
+	}
+	bargraph.setPixel(bgIndexes[bar-1][0], bgIndexes[bar - 1][1], state ? 1 : 0);
+	bargraphCache[bar - 1] = state ? 1 : 0;
 	lastBargraphChange = currentMillis;
 }
 
@@ -769,11 +775,21 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			barrelLights.clear();
 			
 			bargraphClimbing = false;
-			bargraphPeriod = powerDownBargraphDecayPeriod;;
+			
+			bargraphLitCells = bargraphLEDs;
+			while (bargraphLitCells > 0) {
+				if (bargraphCache[bargraphLitCells - 1] == 1) {
+					break;
+				}
+				bargraphLitCells--;
+			}
+			bargraphPeriod = 0.25 * POWERDOWN_TIME;
 			break;
 
 		case FIRING:
 			randomSeed(currentMillis);
+			bargraphLitCells = ((float)bargraphLEDs / 2) + 1;
+			bargraphClimbing = true;
 			break;
 
 		case FIRING_WARN:
@@ -831,6 +847,8 @@ void initialiseState(State newState, unsigned long currentMillis) {
 	state = newState;
 }
 
+unsigned long lastStateUpdate = 0;
+
 void stateUpdate(unsigned long currentMillis) {
 	switch (state) {
 		case OFF:
@@ -855,12 +873,16 @@ void stateUpdate(unsigned long currentMillis) {
 			if (overheatMode &&  (currentMillis > stateLastChanged + OVERHEAT_TIME)) {
 				initialiseState(FIRING_WARN, currentMillis);
 			}
+
+			bargraphPeriod = max(bargraphFiringMinPeriod, bargraphPeriod - (bargraphFiringAcceleration * (currentMillis - lastStateUpdate)));
 			break;
 
 		case FIRING_WARN:
 			if (currentMillis > stateLastChanged + FIRING_WARN_TIME) {
 				initialiseState(VENTING, currentMillis);
 			}
+
+			bargraphPeriod = max(bargraphFiringMinPeriod, bargraphPeriod - (bargraphFiringAcceleration * (currentMillis - lastStateUpdate)));
 			break;
 
 		case VENTING:
@@ -873,6 +895,7 @@ void stateUpdate(unsigned long currentMillis) {
 			if (currentMillis > stateLastChanged + FIRING_STOP_TIME) {
 				initialiseState(IDLE, currentMillis);
 			}
+			//bargraphPeriod = min(bargraphIdlePeriod, bargraphPeriod - (bargraphFiringAcceleration * (currentMillis - lastStateUpdate)));
 			break;
 
 		case MUSIC_MODE:
@@ -881,6 +904,8 @@ void stateUpdate(unsigned long currentMillis) {
 		default:
 			break;
 	}
+
+	lastStateUpdate = currentMillis;
 }
 
 void setSDTrack(unsigned long currentMillis, int newTrackNumber) {
@@ -1054,8 +1079,6 @@ void barrelInit(unsigned long currentMillis) {
 }
 
 void barrelUpdate() {
-	unsigned long currentMillis = millis();
-
 	switch (state) {
 	case OFF:
 		break;
@@ -1171,24 +1194,82 @@ void graphUpdate(unsigned long currentMillis) {
 				bargraphLitCells = max(0, newLitCells < bargraphLEDs ? newLitCells : (2 * bargraphLEDs) - newLitCells);
 				clearBargraph(currentMillis);
 				if (bargraphLitCells > 0) {
-					setBGLampRange(currentMillis, 0, bargraphLitCells - 1);
+					setBGLampRange(currentMillis, 0, bargraphLitCells);
 					bargraph.write();
 				}				
 			}
 			break;
 
 		case IDLE:
+			if ((currentMillis - lastBargraphChange) > (((float)bargraphPeriod) / bargraphLEDs)) {
+                if ((bargraphClimbing && (bargraphLitCells == bargraphLEDs)) || (!bargraphClimbing && (bargraphLitCells == 0))) {
+					bargraphClimbing = !bargraphClimbing;
+                } 
+				bargraphLitCells = bargraphLitCells + (bargraphClimbing ? 1 : -1);
+
+				clearBargraph(currentMillis);
+				setBGLampRange(currentMillis, 0, bargraphLitCells);
+				bargraph.write();
+				lastBargraphChange = currentMillis;
+            }
 			break;
 
 		case POWERDOWN:
+			// Powerdown sequence will wipe from the highest lamp downwards, regardless of current animation
+			if ((currentMillis - lastBargraphChange) > ((float)bargraphPeriod / bargraphLEDs)) {
+				if (bargraphLitCells > 0) {
+					setBGLampRange(currentMillis, bargraphLitCells, bargraphLEDs, false);
+					bargraphLitCells--;
+					bargraph.write();
+				}
+				else {
+					clearBargraph(currentMillis);
+				}
+			}
 			break;
 
+		case FIRING_STOP:
+			// Terminate the animation during a ceasefire on the final climb
+			if (bargraphClimbing && (bargraphLitCells == (bargraphLEDs - bargraphFiringWidth + 1))) {
+				clearBargraph(currentMillis);
+				break;
+			}
 		case FIRING:
 		case FIRING_WARN:
-		case FIRING_STOP:
+			// TODO: Potentially make the warning animation just flash?
+			if ((currentMillis - lastBargraphChange) > ((float)bargraphPeriod / (((float)0.5 * bargraphLEDs) - bargraphFiringWidth + 1))) {
+				if ((bargraphClimbing && (bargraphLitCells == (bargraphLEDs - bargraphFiringWidth + 1))) || 
+					(!bargraphClimbing && (bargraphLitCells == 1 + (float)bargraphLEDs/2))) {
+					bargraphClimbing = !bargraphClimbing;
+				}
+
+				DEBUG_SERIAL.println(bargraphLitCells);
+
+				bargraphLitCells = bargraphLitCells + (bargraphClimbing ? 1 : -1);
+
+				clearBargraph(currentMillis);
+				setBGLampRange(currentMillis, bargraphLitCells, bargraphLitCells + bargraphFiringWidth - 1);
+				setBGLampRange(currentMillis, (bargraphLEDs - (bargraphLitCells + 1)), (bargraphLEDs - (bargraphLitCells + 1) + (bargraphFiringWidth - 1)));
+				bargraph.write();
+				lastBargraphChange = currentMillis;
+			}
 			break;
 
-		case VENTING:
+		// Clears a random scattering of LEDs 10 times over the course of the venting
+		case VENTING:			
+			if ((max(stateLastChanged,currentMillis) - stateLastChanged) < VENT_LIGHT_FADE_TIME) {
+
+				if ((currentMillis - lastBargraphChange) > ((float)VENT_LIGHT_FADE_TIME / 10)) {
+					for (int i = 0; i < ((float)bargraphLEDs / random(4,10)); i++) {
+						setBGLamp(currentMillis, random(1, bargraphLEDs + 1), false);
+					}
+					bargraph.write();
+					lastBargraphChange = currentMillis;
+				}
+			}
+			else {
+				clearBargraph(currentMillis);
+			}
 			break;
 
 		default:

@@ -30,8 +30,9 @@ const int defaultTrack = 0;
 #define OVERHEAT_TIME 7500
 #define FIRING_WARN_TIME 5000
 #define FIRING_STOP_TIME 2500
-#define VENT_LIGHT_FADE_TIME 200
 #define VENT_TIME 3000
+#define VENT_LIGHT_FADE_TIME (VENT_TIME/15)
+
 
 // Tracks (comments are ms length)
 const char* sfxBoot = "SFX/powerup.wav"; // 3907
