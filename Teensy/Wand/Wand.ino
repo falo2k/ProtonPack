@@ -136,12 +136,12 @@ const uint32_t topBackColour = Adafruit_NeoPixel::Color(200, 40, 0, 0);
 const uint32_t sloBloColour = Adafruit_NeoPixel::Color(255, 0, 0, 0);
 
 const int bargraphLEDs = 28;
-int bargraphLitIndex = 0;
+int bargraphLitCells = 0;
 bool bargraphClimbing = true;
 const int bargraphIdlePeriod = 1500;
 int bargraphPeriod = 1500;
 
-const int powerDownBargraphDecayPeriod = (int)((float)bargraphLitIndex * POWERDOWN_TIME / bargraphLEDs);
+const int powerDownBargraphDecayPeriod = (int)((float)bargraphLitCells * POWERDOWN_TIME / bargraphLEDs);
 unsigned long lastBargraphChange;
 int bargraphCache[bargraphLEDs];
 
@@ -229,22 +229,23 @@ void loop() {
 /*  ----------------------
 	Bargraph Helper Functions
 ----------------------- */
-void setBGLamp(int index) {
-	setBGLamp(index, true);
+void setBGLamp(unsigned long currentMillis, int index) {
+	setBGLamp(currentMillis, index, true);
 }
 
-void setBGLamp(int index, bool state) {
+void setBGLamp(unsigned long currentMillis, int index, bool state) {
 	bargraph.setPixel(bgIndexes[index][0], bgIndexes[index][1], state ? 1 : 0);
 	bargraphCache[index] = state ? 1 : 0;
+	lastBargraphChange = currentMillis;
 }
 
-void setBGLampRange(int from, int to) {
-	setBGLampRange(from, to, true);
+void setBGLampRange(unsigned long currentMillis, int from, int to) {
+	setBGLampRange(currentMillis, from, to, true);
 }
 
-void setBGLampRange(int from, int to, bool state) {
+void setBGLampRange(unsigned long currentMillis, int from, int to, bool state) {
 	for (int i = from; i <= to; i++) {
-		setBGLamp(i, state);
+		setBGLamp(currentMillis, i, state);
 	}
 }
 
@@ -256,6 +257,7 @@ void clearBargraph(unsigned long currentMillis) {
 	}
 
 	lastBargraphChange = currentMillis;
+	bargraph.write();
 }
 
 /*  ----------------------
@@ -735,7 +737,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			bodyLights.clear();
 			barrelLights.clear();
 			clearBargraph(currentMillis);
-			bargraphLitIndex = 0;
+			bargraphLitCells = 0;
 			bargraphClimbing = true;
 			break;
 
@@ -753,7 +755,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			lastBodyChange[SLO_BLO_INDEX] = currentMillis;
 
 			clearBargraph(currentMillis);
-			bargraphLitIndex = 0;
+			bargraphLitCells = 0;
 			bargraphClimbing = true;
 			bargraphPeriod = bargraphIdlePeriod;
 			break;
@@ -786,7 +788,8 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			bodyLights.clear();
 			barrelLights.clear();
 
-			setBGLampRange(0, bargraphLEDs);
+			setBGLampRange(currentMillis, 0, bargraphLEDs);
+			bargraph.write();
 			break;
 
 		case FIRING_STOP:
@@ -1151,6 +1154,7 @@ void tipUpdate() {
 void graphInit(unsigned long currentMillis) {
 	bargraph.init(0x70);
 	bargraph.setBrightness(12);
+	bargraphLitCells = 0;
 
 	clearBargraph(currentMillis);
 }
@@ -1162,7 +1166,15 @@ void graphUpdate(unsigned long currentMillis) {
 		case MUSIC_MODE:
 			break;
 
-		case BOOTING:
+		case BOOTING: {
+				int newLitCells = round(2 * (((float)max(stateLastChanged, currentMillis) - stateLastChanged) / BOOTING_TIME) * bargraphLEDs);
+				bargraphLitCells = max(0, newLitCells < bargraphLEDs ? newLitCells : (2 * bargraphLEDs) - newLitCells);
+				clearBargraph(currentMillis);
+				if (bargraphLitCells > 0) {
+					setBGLampRange(currentMillis, 0, bargraphLitCells - 1);
+					bargraph.write();
+				}				
+			}
 			break;
 
 		case IDLE:

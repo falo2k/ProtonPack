@@ -116,15 +116,14 @@ int trackNumber = defaultTrack;
 unsigned long stateLastChanged;
 
 // POWER CELL STATE
-int powerCellLitIndex = 0;
+int powerCellLitBar = 0;
 const int powerCellIdlePeriod = 1000;
 const int powerCellFiringPeriod = 500;
 int powerCellPeriod = 1000;
 const int powerDownPCellDecayTickPeriod = (int)(0.025 * POWERDOWN_TIME);
 unsigned long lastPowerCellChange;
 const uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 250);
-const float maxPCellIndex = 0.85 * PCELL_LED_COUNT;
-float pCellMinIndex = 0.0;
+float pCellMinBar = 0.0;
 // Rate for power cell minimum to climb when firing
 const int pCellClimbPeriod = 500;
 const float pCellClimbRate = 1.0 / pCellClimbPeriod;
@@ -505,7 +504,8 @@ void initialiseState(State newState, unsigned long currentMillis) {
     case IDLE:
         powerCellPeriod = powerCellIdlePeriod;
         cyclotronSpinPeriod = cyclotronIdlePeriod;        
-        pCellMinIndex = 0.0;
+        pCellMinBar = 0.0;
+        pcellLights.clear();
         ventLights.clear();
 
         // Store current cyclotron value state for bulb fade - at this point
@@ -526,7 +526,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
         break;
 
     case FIRING:
-        pCellMinIndex = 0.0;// 0.1 * PCELL_LED_COUNT;
+        pCellMinBar = 0.0;// 0.1 * PCELL_LED_COUNT;
         powerCellPeriod = powerCellFiringPeriod;
 
         sdFXChannel.play(sfxFireHead);
@@ -622,12 +622,12 @@ void stateUpdate(unsigned long currentMillis) {
         }
 
         cyclotronSpinPeriod = max(cyclotronMinPeriod, cyclotronSpinPeriod - (cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
-        pCellMinIndex = min(maxPCellIndex, pCellMinIndex + (pCellClimbRate * (currentMillis - lastStateUpdate)));
+        pCellMinBar = min(PCELL_LED_COUNT, pCellMinBar + (pCellClimbRate * (currentMillis - lastStateUpdate)));
         break;
 
     case FIRING_STOP:
         cyclotronSpinPeriod = min(cyclotronIdlePeriod, cyclotronSpinPeriod + (100 * cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
-        pCellMinIndex = max(0.0, pCellMinIndex - (3 * pCellClimbRate * (currentMillis - lastStateUpdate)));
+        pCellMinBar = max(0.0, pCellMinBar - (3 * pCellClimbRate * (currentMillis - lastStateUpdate)));
         break;
 
     case VENTING:
@@ -652,8 +652,8 @@ void stateUpdate(unsigned long currentMillis) {
 void pcellInit() {
     lastPowerCellChange = millis();
     powerCellPeriod = powerCellIdlePeriod;
-    powerCellLitIndex = 0;
-    pCellMinIndex = 0.0;
+    powerCellLitBar = 0;
+    pCellMinBar = 0.0;
     pcellLights.clear();    
 }
 
@@ -666,8 +666,8 @@ void pcellUpdate() {
 
         case BOOTING: {
                 int newPowerCellLitIndex = round(2 * (((float)max(stateLastChanged, currentMillis) - stateLastChanged) / BOOTING_TIME) * PCELL_LED_COUNT);
-                powerCellLitIndex = newPowerCellLitIndex < PCELL_LED_COUNT ? newPowerCellLitIndex : (2 * PCELL_LED_COUNT) - newPowerCellLitIndex;
-                pcellLightTo(powerCellLitIndex);
+                powerCellLitBar = max(0, newPowerCellLitIndex < PCELL_LED_COUNT ? newPowerCellLitIndex : (2 * PCELL_LED_COUNT) - newPowerCellLitIndex);
+                pcellLightTo(powerCellLitBar);
                 lastPowerCellChange = currentMillis;
             }
 	        break;
@@ -677,22 +677,26 @@ void pcellUpdate() {
         case FIRING_STOP:
         case IDLE:
             if ((currentMillis - lastPowerCellChange) > (((float)powerCellPeriod) / PCELL_LED_COUNT)) {
-                if (powerCellLitIndex >= PCELL_LED_COUNT) {
-                    powerCellLitIndex = floor(pCellMinIndex);
+                if (powerCellLitBar >= PCELL_LED_COUNT) {
+                    powerCellLitBar = floor(pCellMinBar);
                 } 
                 else {                    
-                    powerCellLitIndex++;
+                    powerCellLitBar++;
                 }
-                pcellLightTo(powerCellLitIndex);
+                pcellLightTo(powerCellLitBar);
                 lastPowerCellChange = currentMillis;
             }
 	        break;
 
         case POWERDOWN:
             if ((currentMillis - lastPowerCellChange) > powerDownPCellDecayTickPeriod) {
-                if (powerCellLitIndex >= 0) {
-                    powerCellLitIndex--;
-                    pcellLightTo(powerCellLitIndex);
+                if (powerCellLitBar > 0) {
+                    powerCellLitBar--;
+                    pcellLightTo(powerCellLitBar);
+                    lastPowerCellChange = currentMillis;
+                }
+                else {
+                    pcellLights.clear();
                     lastPowerCellChange = currentMillis;
                 }
             }
@@ -701,7 +705,7 @@ void pcellUpdate() {
         case VENTING: {
                 unsigned long timeSinceVent = max(currentMillis, stateLastChanged) - stateLastChanged;
                 if (timeSinceVent < VENT_LIGHT_FADE_TIME) {
-                    for (int i = 0; i <= powerCellLitIndex; i++) {
+                    for (int i = 0; i < powerCellLitBar; i++) {
                         pcellLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(pCellColour, 1 - (float)timeSinceVent / VENT_LIGHT_FADE_TIME)));
                     }
                 }
@@ -717,29 +721,27 @@ void pcellUpdate() {
         case MUSIC_MODE: {
                 if (audioPeak.available()) {
                     float peak = min(audioPeak.read(), 1);
-                    int maxIndex = (PCELL_LED_COUNT - 1);
                     
-                    powerCellLitIndex = floor(peakMultiplier * peak * maxIndex);
+                    powerCellLitBar = floor(peakMultiplier * peak * PCELL_LED_COUNT);
                     pcellLights.clear();
 
-                    for (int i = 0; i < powerCellLitIndex; i++) {
+                    for (int i = 0; i < powerCellLitBar; i++) {
                         pcellLights.setPixelColor(i, 
                             Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::Color(
                                 0,
-                                255 * pow(((float)(maxIndex - i)/ maxIndex),1),
-                                75 * pow(((float)(i) / maxIndex),0.5)
+                                255 * pow(((float)(PCELL_LED_COUNT - i)/ PCELL_LED_COUNT),1),
+                                75 * pow(((float)(i) / PCELL_LED_COUNT),0.5)
                             )));
                     }
 
-                    if ((powerCellLitIndex < maxIndex)/* && (powerCellLitIndex > 0)*/) {
-                        float remainder = 0.01 * (((int)(peakMultiplier * peak * maxIndex * 100.0)) % 100);
-                        int i = powerCellLitIndex + 1;
-
-                        pcellLights.setPixelColor(powerCellLitIndex,
+                    if ((powerCellLitBar < PCELL_LED_COUNT)/* && (powerCellLitIndex > 0)*/) {
+                        float remainder = 0.01 * (((int)(peakMultiplier * peak * PCELL_LED_COUNT * 100.0)) % 100);
+                        
+                        pcellLights.setPixelColor(powerCellLitBar - 1,
                             Adafruit_NeoPixel::gamma32(colourMultiply(Adafruit_NeoPixel::Color(
                                 0,
-                                255 * pow((maxIndex - powerCellLitIndex) / maxIndex, 1),
-                                75 * pow((powerCellLitIndex / maxIndex), 0.5)
+                                255 * pow((PCELL_LED_COUNT - powerCellLitBar) / PCELL_LED_COUNT, 1),
+                                75 * pow((powerCellLitBar / PCELL_LED_COUNT), 0.5)
                             ), remainder)));
                     }
                     pcellLights.show();
@@ -753,13 +755,13 @@ void pcellUpdate() {
     }
 }
 
-void pcellLightTo(int lightIndex) {
-    pcellLightTo(lightIndex, true);
+void pcellLightTo(int lightBar) {
+    pcellLightTo(lightBar, true);
 }
 
-void pcellLightTo(int lightIndex, bool show) {
+void pcellLightTo(int lightBar, bool show) {
     pcellLights.clear();
-    for (int i = 0; i <= lightIndex; i++) {
+    for (int i = 0; i < lightBar; i++) {
         pcellLights.setPixelColor(i, pCellColour);
     }
     if (show) { pcellLights.show(); }
