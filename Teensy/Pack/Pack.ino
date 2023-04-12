@@ -117,9 +117,9 @@ unsigned long stateLastChanged;
 
 // POWER CELL STATE
 int powerCellLitIndex = 0;
-const int powerCellIdlePeriod = 1500;
-const int powerCellFiringPeriod = 750;
-int powerCellPeriod = 1500;
+const int powerCellIdlePeriod = 1000;
+const int powerCellFiringPeriod = 500;
+int powerCellPeriod = 1000;
 const int powerDownPCellDecayTickPeriod = (int)(0.025 * POWERDOWN_TIME);
 unsigned long lastPowerCellChange;
 const uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 250);
@@ -136,7 +136,7 @@ unsigned long lastCycloChange[CYCLO_LED_COUNT];
 const int cyclotronMinPeriod = 100;
 const int cyclotronIdlePeriod = 4000;
 // ms to reduce spin period per ms of firing
-const float cyclotronFiringAcceleration = 0.05;
+const float cyclotronFiringAcceleration = 0.01;
 int cyclotronSpinPeriod = 4000;
 // Rate for cyclotron lamps to fade under normal operation
 const int lampFadeMs = 250;
@@ -503,13 +503,15 @@ void initialiseState(State newState, unsigned long currentMillis) {
     case IDLE:
         powerCellPeriod = powerCellIdlePeriod;
         cyclotronSpinPeriod = cyclotronIdlePeriod;        
-        /*for (int i = 0; i < CYCLO_LED_COUNT; i++) {
-            lastCycloChange[i] = currentMillis;
-        }*/
         pCellMinIndex = 0.0;
-        //cycloLights.setPixelColor(cyclotronLitIndex, cyclotronFull);
-        //pcellLights.clear();
         ventLights.clear();
+
+        // Store current cyclotron value state for bulb fade - at this point
+        // I'm wondering if I should just cache these on any change, but here we are
+        for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+            savedCyclotronValues[i] = cycloLights.getPixelColor(i);
+        }
+
         break;
 
     case POWERDOWN:
@@ -586,6 +588,8 @@ void initialiseState(State newState, unsigned long currentMillis) {
 
 unsigned long lastStateUpdate = 0;
 
+unsigned long tempCheck = 0;
+
 void stateUpdate(unsigned long currentMillis) {
     switch (state) {
     case OFF:
@@ -622,8 +626,13 @@ void stateUpdate(unsigned long currentMillis) {
         break;
 
     case FIRING_STOP:
-        cyclotronSpinPeriod = min(cyclotronIdlePeriod, cyclotronSpinPeriod + (10 * cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
-        pCellMinIndex = max(0.0, pCellMinIndex - (10 * pCellClimbRate * (currentMillis - lastStateUpdate)));
+        if (currentMillis - tempCheck > 250) {
+            DEBUG_SERIAL.print("Cyclo Spin: "); DEBUG_SERIAL.print(cyclotronSpinPeriod); DEBUG_SERIAL.print("/"); DEBUG_SERIAL.println(cyclotronIdlePeriod);
+            DEBUG_SERIAL.print("pCellMinIndex Spin: "); DEBUG_SERIAL.println(pCellMinIndex);
+            tempCheck = currentMillis;
+        }
+        cyclotronSpinPeriod = min(cyclotronIdlePeriod, cyclotronSpinPeriod + (100 * cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
+        pCellMinIndex = max(0.0, pCellMinIndex - (3 * pCellClimbRate * (currentMillis - lastStateUpdate)));
         break;
 
     case VENTING:
@@ -781,7 +790,7 @@ void cycloUpdate() {
         break;
 
     case BOOTING:{
-            float cycloIntensity = ((float) (max(stateLastChanged, currentMillis) - stateLastChanged)) / BOOTING_TIME;
+            float cycloIntensity = min(1, ((float) (max(stateLastChanged, currentMillis) - stateLastChanged)) / BOOTING_TIME);
             for (int i = 0; i < CYCLO_LED_COUNT; i++) {                
                 cycloLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(cyclotronFull, cycloIntensity)));
                 lastCycloChange[i] = currentMillis;
@@ -794,7 +803,6 @@ void cycloUpdate() {
         case FIRING:
         case FIRING_WARN:
         case FIRING_STOP:
-            // TODO: Need some special handlign with firing stop to slow down the cyclotron and power cell
         case IDLE: {
             // Move the lit lamp if we hit the period change
             if ((currentMillis - lastCycloChange[cyclotronLitIndex]) > (((float)cyclotronSpinPeriod) / CYCLO_LED_COUNT)) {
