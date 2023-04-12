@@ -128,7 +128,7 @@ float pCellMinIndex = 0.0;
 // Rate for power cell minimum to climb when firing
 const int pCellClimbPeriod = 500;
 const float pCellClimbRate = 1.0 / pCellClimbPeriod;
-const float peakMultiplier = 1.5;
+const float peakMultiplier = 2;
 
 // CYCLOTRON STATE
 int cyclotronLitIndex = 0;
@@ -143,7 +143,7 @@ const int lampFadeMs = 250;
 const float cycloSpinDecayRate = 255.0 / lampFadeMs;
 
 // Scaling used for audio visualisation
-const float fftMultiplier = 2;
+const float fftMultiplier = 1;
 const float fftExponent = 0.25;
 const float rmsMultiplier = 3;
 const float rmsExponent = 0.5;
@@ -196,7 +196,7 @@ void setup() {
     sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
     //sgtl5000_1.unmuteLineout();
     //sgtl5000_1.lineOutLevel(21);
-    audioFFT.averageTogether(25);
+    audioFFT.averageTogether(10);
 
     // Ensure the mono-mixer maxes out at 1
     audioInMonoMix.gain(0, 0.5);
@@ -714,30 +714,30 @@ void pcellUpdate() {
                     
         case MUSIC_MODE: {
                 if (audioPeak.available()) {
-                    float peak = audioPeak.read();
+                    float peak = min(audioPeak.read(), 1);
+                    int maxIndex = (PCELL_LED_COUNT - 1);
                     
-
-                    powerCellLitIndex = floor(peakMultiplier * peak * PCELL_LED_COUNT);
+                    powerCellLitIndex = floor(peakMultiplier * peak * maxIndex);
                     pcellLights.clear();
 
-                    for (int i = 0; i <= powerCellLitIndex; i++) {
+                    for (int i = 0; i < powerCellLitIndex; i++) {
                         pcellLights.setPixelColor(i, 
                             Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::Color(
                                 0,
-                                255 * pow(((float)(PCELL_LED_COUNT - i)/PCELL_LED_COUNT),0.2),
-                                100 * pow(((float)(i) / PCELL_LED_COUNT),2)
+                                255 * pow(((float)(maxIndex - i)/ maxIndex),1),
+                                75 * pow(((float)(i) / maxIndex),0.5)
                             )));
                     }
 
-                    if (powerCellLitIndex < PCELL_LED_COUNT - 1) {
-                        float remainder = 0.01 * (((int)(peakMultiplier * peak * PCELL_LED_COUNT * 100.0)) % 100);
+                    if ((powerCellLitIndex < maxIndex)/* && (powerCellLitIndex > 0)*/) {
+                        float remainder = 0.01 * (((int)(peakMultiplier * peak * maxIndex * 100.0)) % 100);
                         int i = powerCellLitIndex + 1;
 
-                        pcellLights.setPixelColor(i,
+                        pcellLights.setPixelColor(powerCellLitIndex,
                             Adafruit_NeoPixel::gamma32(colourMultiply(Adafruit_NeoPixel::Color(
                                 0,
-                                255 * ((PCELL_LED_COUNT - i) / PCELL_LED_COUNT),
-                                100 * ((i + 1) / PCELL_LED_COUNT)
+                                255 * pow((maxIndex - powerCellLitIndex) / maxIndex, 1),
+                                75 * pow((powerCellLitIndex / maxIndex), 0.5)
                             ), remainder)));
                     }
                     pcellLights.show();
