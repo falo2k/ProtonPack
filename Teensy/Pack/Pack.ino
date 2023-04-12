@@ -875,11 +875,8 @@ void cycloUpdate() {
                 
                 double rms = min(1, pow(audioRMS.read() * rmsMultiplier, rmsExponent));
 
-                /*char output[64];
-                sprintf(output, "FFT: %0.2f,%0.2f,%0.2f,%0.2f | RMS: %0.2f", band1, band2, band3, band4, rms);
-                DEBUG_SERIAL.println(output);*/
-
-                for (int i = 0; i < 4; i++) {
+                // Green, Yellow, Red Based on RMS
+                /*for (int i = 0; i < 4; i++) {
                     cycloLights.setPixelColor(i,
                         Adafruit_NeoPixel::gamma32(colourMultiply(Adafruit_NeoPixel::Color(
                             255 * rms,
@@ -887,6 +884,15 @@ void cycloUpdate() {
                             0,
                             0
                         ), band[i])));
+                }*/
+
+                // Hue based on RMS, Saturation = 255, Brightness as Band
+                for (int i = 0; i < 4; i++) {
+                    cycloLights.setPixelColor(i,
+                        Adafruit_NeoPixel::ColorHSV(
+                            rms * 65535,
+                            255,
+                            band[i] * 255));
                 }
                 cycloLights.show();
             }
