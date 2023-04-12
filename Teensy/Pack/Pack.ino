@@ -126,9 +126,8 @@ const uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 250);
 const float maxPCellIndex = 0.85 * PCELL_LED_COUNT;
 float pCellMinIndex = 0.0;
 // Rate for power cell minimum to climb when firing
-const int pCellClimbPeriod = 1000;
+const int pCellClimbPeriod = 500;
 const float pCellClimbRate = 1.0 / pCellClimbPeriod;
-
 const float peakMultiplier = 1.5;
 
 // CYCLOTRON STATE
@@ -158,7 +157,6 @@ const float powerDownCycloDecayRate = (float)255 / (0.8 * POWERDOWN_TIME);
 
 uint32_t cyclotronFull = Adafruit_NeoPixel::Color(255, 0, 0, 0);
 uint32_t cyclotronOverheat = Adafruit_NeoPixel::Color(255, 0, 0, 10);
-
 uint32_t ventColour = Adafruit_NeoPixel::Color(255, 255, 255, 255);
 
 /*  ----------------------
@@ -540,16 +538,17 @@ void initialiseState(State newState, unsigned long currentMillis) {
     case FIRING_WARN:
         break;
         
-    case VENTING:
-        for (int i = 0; i < VENT_LED_COUNT; i++) {
-            ventLights.setPixelColor(i, ventColour);
-        }
-        for (int i = 0; i < CYCLO_LED_COUNT; i++) {
-            cycloLights.setPixelColor(i, cyclotronOverheat);
-        }
+    case VENTING: {
+            for (int i = 0; i < VENT_LED_COUNT; i++) {
+                ventLights.setPixelColor(i, ventColour);
+            }
+            for (int i = 0; i < CYCLO_LED_COUNT; i++) {
+                cycloLights.setPixelColor(i, cyclotronOverheat);
+            }
 
-        sdBackgroundChannel.stop();
-        sdFXChannel.play(sfxVent);
+            sdBackgroundChannel.stop();
+            sdFXChannel.play(sfxVent);
+        }
         break;
     
     case MUSIC_MODE:
@@ -623,8 +622,8 @@ void stateUpdate(unsigned long currentMillis) {
         break;
 
     case FIRING_STOP:
-        cyclotronSpinPeriod = min(cyclotronIdlePeriod, cyclotronSpinPeriod + (5 * cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
-        pCellMinIndex = max(0.0, pCellMinIndex - (5 * pCellClimbRate * (currentMillis - lastStateUpdate)));
+        cyclotronSpinPeriod = min(cyclotronIdlePeriod, cyclotronSpinPeriod + (10 * cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
+        pCellMinIndex = max(0.0, pCellMinIndex - (10 * pCellClimbRate * (currentMillis - lastStateUpdate)));
         break;
 
     case VENTING:
@@ -698,8 +697,8 @@ void pcellUpdate() {
         case VENTING: {
                 unsigned long timeSinceVent = max(currentMillis, stateLastChanged) - stateLastChanged;
                 if (timeSinceVent < VENT_LIGHT_FADE_TIME) {
-                    for (int i = 0; i < powerCellLitIndex; i++) {
-                        pcellLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(pCellColour, (float)timeSinceVent / VENT_LIGHT_FADE_TIME)));
+                    for (int i = 0; i <= powerCellLitIndex; i++) {
+                        pcellLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(pCellColour, 1 - (float)timeSinceVent / VENT_LIGHT_FADE_TIME)));
                     }
                 }
                 else {
@@ -850,12 +849,13 @@ void cycloUpdate() {
             unsigned long timeSinceVent = max(currentMillis, stateLastChanged) - stateLastChanged;
             if (timeSinceVent < VENT_LIGHT_FADE_TIME) {
                 for (int i = 0; i < CYCLO_LED_COUNT; i++) {
-                    cycloLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(cyclotronOverheat, (float)timeSinceVent / VENT_LIGHT_FADE_TIME)));
+                    cycloLights.setPixelColor(i, Adafruit_NeoPixel::gamma32(colourMultiply(cyclotronOverheat, 1 - (float)timeSinceVent / VENT_LIGHT_FADE_TIME)));
                 }
             }
             else {
                 cycloLights.clear();
             }
+
             for (int i = 0; i < CYCLO_LED_COUNT; i++) {
                 lastCycloChange[i] = currentMillis;
             }
