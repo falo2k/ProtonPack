@@ -3,27 +3,47 @@ This is my implementation of the electronics for a Ghostbusters Proton Pack.  It
 - An OLED display in the rear box on the wand is used for managing volume control and track selection, in conjunctions with a rotary encoder (push/turn) in the top knob.
 - A bluetooth receiver can be turned on for playback of anything not available on the SD card.  The module I'm using will mix the stereo audio down to mono for a single pack, but comes as a pair for True Wireless Stereo.  The other board will be in a friend's pack so we can use the packs as a complete speaker set.
 
+It is designed to fit inside the 3D printed pack available [here - the Q-Pack](https://github.com/mr-kiou/q-pack).  It's been developed for a Mk3 pack - I will review it at some point in the future for Mk4 compatability.
+
+*TBD Demo Video*
+
 ## Software
 The code is set up as a VS solution/project set using [Visual Micro](https://www.visualmicro.com/), but you can tweak this to your preferred environment.  There are three core files:
 - Wand.ino for the Wand sketch on the Teensy LC
 - Pack.ino for the Pack sketch on the Teensy 4.0
 - ProtonPackCommon.h which is used by both for some shared enums, timers, etc.
 
-The Wand sketch does all state management, and will update the Pack sketch as necessary over serial.
+The Wand sketch does all state management, and will update the Pack sketch as necessary over serial.  If you want to tweak speeds, animations, direction of switches, etc. then you should find the right data to change either above the setup() functions in each file, or within the common header.
 
-You'll also need the libraries listed in the section below.
+You'll need the libraries listed in the section below.
 
 ### Libraries
-https://github.com/lipoyang/minIni4Arduino
-https://github.com/lexus2k/lcdgfx/
-https://github.com/thijse/Arduino-CmdMessenger
-https://github.com/PaulStoffregen/Encoder
-https://github.com/jonpearse/ht16k33-arduino
-https://github.com/adafruit/Adafruit_NeoPixel
-https://github.com/cygig/TimerEvent
+[minIni for Arduino](https://github.com/lipoyang/minIni4Arduino) - Config file saving/loading with the SD card
+[LCDGFX](https://github.com/lexus2k/lcdgfx/) - Drives the OLED display
+[CmdMessenger](https://github.com/thijse/Arduino-CmdMessenger) - Manages serial connection between both boards with callbacks
+[Encoder](https://github.com/PaulStoffregen/Encoder) - Converts rotary encoder inputs to movement
+[HT16K33](https://github.com/jonpearse/ht16k33-arduino) - Basic library for controlling the LED matrix backpack/bargraph.
+[NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel) - The Adafruit NeoPixel library.  Considered using FastLED, but as I had GRBW LEDs in stock (and wanted them for some parts) I stuck with the Adafruit library.
+[TimerEvent](https://github.com/cygig/TimerEvent) - A library for managing timing of updates (helping to banish unnecessary delay() calls)
+[Switch](https://github.com/avandalen/avdweb_Switch) - Primarily used for the debouncing and callback features for switches.  Detects events for pressing, holding, and releasing.
 
 ### Pack Operation
+Once power is on to both boards, they will start up in the state determined by the current switch positions, so you can switch straight into music mode if you want.
 
+Act Switch on Left Box
+ : This toggles the pack power for both movie and music mode.
+Lower Switch Next to Bargraph
+ : In movie mode this toggles whether or not the overheat warning will kick in after a period of time and then move to venting after further warning.  If off, firing will continue indefinitely.  In music mode, this is used to toggle the Bluetooth module on, which will then stop any playback from the SD card.
+Upper Switch Next to Bargraph
+ : This switches between movie mode (off) and music mode (on)
+Int Button on Left Box
+ : In movie mode, this will cause the pack to fire while held.  In music mode a single press will act as a play/pause button, while a long press will move to the next track in the list.
+Tip Button
+ : In movie mode, this will cause the pack to fire while held.  If single pressed, it will cause a venting routing to kick off.  In music mode a single press will act as a stop button, while a long press will move to the previous track in the list.
+Pack Crank Knob
+ : Connected to an encoder, this will currently just mimic the behaviour of the wand encoder (see the OLED Menu System below).
+Pack Ion Switch
+ : Currently unused.
 
 ### OLED Menu System
 A long press on the Wand encoder will activate the menu (to avoid accidental bumps).  While active, a long press will also cancel the menu.  The menu has an automatic timeout so will not stay open indefinitely.  Single click to select / confirm menu items
@@ -34,16 +54,62 @@ Currently there are three features for control:
 3. Load/Save Config: This will load or save the volume and track configuration to a file on the SD card.  This is loaded as the default when the pack is first powered
 
 ### Future Plans
-- Some pin headers in the pack are spare to support adding a smoke machine to the pack at a later date for venting.  This should be easy to trigger in software.
+- Some pin headers in the pack are already spare to support adding a smoke machine to the pack at a later date for venting (market as IO2 on the PCB).  This should be easy to trigger in software.
 - Alternative lighting schemes, sounds, animations, etc. can be added relatively easily.  Switching would probably be done with additional menu items through the OLED controls.
 - I'd like to add more granular volume control, again through the menu, to individually tweak the volume of SFX, Music, and Bluetooth channels.
+- The Ion Switch input currently doesn't do anything.  I may use this as either a hard or soft toggle for any future smoke effects.
+- Check compatibility with Mk4 Q-Pack and generally review the PCBs for other options.  Now I've got my own wiring in, I might see some better positioning for connectors, consider breakout boards, etc.
 
 ## Hardware
 ### BOM
-[TBC] Equipment used and links to purchase
+Where I can remember it, I've listed the Equipment used and links to purchase below.  You may find other sources are better for availability (Mouser, Digikey, etc.).  As with all of these types of projects, it depends exactly how you're planning to mount your electronics, so I'd advise thinking about your layout before purchasing.
+
+**Controllers**
+ 1 x [Teensy LC](https://www.pjrc.com/store/teensylc.html).  Would be fine using a Teensy 4.0 here as well if availability is a challenge
+ 1 x [Teensy 4.0](https://www.pjrc.com/store/teensy40.html)
+ 1 x [Teensy Audio Board Rev D](https://www.pjrc.com/store/teensy3_audio.html)
+ 1 x [Teensy Stacking Header Kit](https://www.adafruit.com/product/3883).  For the audio board to stack on the Teensy 4.0.  This was the easiest source of 14 pin stackable headers I could find.  If not using PCBs then you may just stick with non-stacking headers here.
+ 4 x [14x1R Pins](https://www.pjrc.com/store/header_14x1.html) for the Teensy boards
+ 4 x [14x1R Headers](https://www.pjrc.com/store/socket_14x1.html) for the PCBs
+ 1 x 5x2R Header for the PCB connection to the audio inputs/outputs on the board
+ 1 x Micro SD Card for the Audio Adapter.  See the Audio Adapter product page for up to date recommendations.  Not much is stored on here so you can get away with a fairly small card, but if you want to load more songs on YMMV.
+
+**Premade Boards**
+1 x [Adafruit 16x8 LED Matrix Driver Backpack - HT16K33 Breakout](https://www.adafruit.com/product/1427) for driving the bargraph.
+*TBC*
+Mosfet boards, amp, bluetooth controller
+
+**Buttons and Switches**
+*TBC*
+toggles, momentary, ion switch, encoders
+
+**LEDs**
+*TBC*
+strips for pcell, individuals for cyclotron, vent, body, tip, jewel for barrel, bargraph (with notes for common anode/cathod)
+
+**Capacitors and Resistors**
+*TBC*
+pullups, neopixels, filters
+
+**Connectors (for PCB)**
+*TBC*
+JST-XH, terminal connectors, dupont
+
+**Other**
+ 2 x [74AHCT125 Level Shifters](https://www.adafruit.com/product/1787) for driving the Neopixels as the Teensy uses 3.3V logic.  You may get away without these, but better safe than sorry.
+ 2 x [14 Pin IC Sockets](https://www.digikey.co.uk/en/products/detail/cnc-tech/245-14-1-03/3441580) for mounting the above into the PCBs (or you can just solder them in).
+*TBC*
+OLED Display, thumb nut for encoder
 
 ### PCBs
-[TBC] - I have created a couple of PCBs to make installation neater.  I will share these here when I have manage to export them in
+I have created a couple of PCBs to make installation neater in a Q-Pack.  I've shared the production files in the PCBs folder for use with [JLCPCB](https://jlcpcb.com/).  I used Altium Circuitmaker to create these, so it's hard to share a useful copy of them.  I plan at some point to migrate these to KiCad but that requires time to learn KiCad.  It'll probably happen when I start working on a better belt gizmo :)  
+
+The folder also contains STLs to mount the boards and keep the solder joins clear of the mounting surface.  For the Wand, it is just a spacer - the board is designed to fit along the handle side of the Mk3 Q-Pack, using the external M3 bolt to secure it with a nut internally.  This should position the serial/power connections for the handle exit, but leave enough space for an encoder to run through the top knob if desired.  For the pack, it's a backer designed to have M3x5x4 heat sets (standard size used in Vorons) added to the holes so the board can be attached and removed easily with M3 bolts.  The backer can then be secured in place to the motherboard with VHB tape.  It should be slim enough to fit underneath the booster box of the Mk3 Q-Pack.
+
+*TBD Supporting Images*
+
+Revision 1.0: Initial release of boards
+Revision 1.1: Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.
 
 ### Power
 I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.
