@@ -144,9 +144,11 @@ unsigned int bargraphPeriod = 1500;
 unsigned long lastBargraphChange;
 int bargraphCache[bargraphLEDs];
 
+const unsigned int bargraphFiringStartPeriod = 1000;
 const unsigned int bargraphFiringMinPeriod = 100;
+const unsigned int bargraphFiringStopPeriod = 1200;
 const int bargraphFiringWidth = 3;
-const float bargraphFiringAcceleration = 0.05;
+const float bargraphFiringAcceleration = 0.5;
 
 /*  ----------------------
 	Setup and Loops
@@ -262,8 +264,7 @@ void clearBargraph(unsigned long currentMillis) {
 		bargraphCache[i] = 0;
 	}
 
-	lastBargraphChange = currentMillis;
-	bargraph.write();
+	lastBargraphChange = currentMillis;	
 }
 
 /*  ----------------------
@@ -727,6 +728,8 @@ void setStartupState(unsigned long currentMillis) {
 	cmdMessenger.sendCmdEnd();
 }
 
+unsigned long firingStart = 0;
+
 void initialiseState(State newState, unsigned long currentMillis) {
 	DEBUG_SERIAL.print("Initialising State: "); DEBUG_SERIAL.println((char) newState);
 
@@ -736,6 +739,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			bodyLights.clear();
 			barrelLights.clear();			
 			clearBargraph(currentMillis);
+			bargraph.write();
 			break;
 
 		case BOOTING:			
@@ -743,6 +747,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			bodyLights.clear();
 			barrelLights.clear();
 			clearBargraph(currentMillis);
+			bargraph.write();
 			bargraphLitCells = 0;
 			bargraphClimbing = true;
 			break;
@@ -761,6 +766,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			lastBodyChange[SLO_BLO_INDEX] = currentMillis;
 
 			clearBargraph(currentMillis);
+			bargraph.write();
 			bargraphLitCells = 0;
 			bargraphClimbing = true;
 			bargraphPeriod = bargraphIdlePeriod;
@@ -790,6 +796,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			randomSeed(currentMillis);
 			bargraphLitCells = ((float)bargraphLEDs / 2) + 1;
 			bargraphClimbing = true;
+			firingStart = currentMillis;
 			break;
 
 		case FIRING_WARN:
@@ -813,6 +820,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			lastBodyChange[TOP_FORWARD_INDEX] = currentMillis;
 			barrelLights.clear();
 			// Bargraph should continue from previous
+			bargraphPeriod = bargraphFiringStopPeriod;
 			break;
 
 		case MUSIC_MODE:
@@ -820,6 +828,7 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			bodyLights.clear();
 			barrelLights.clear();
 			clearBargraph(currentMillis);
+			bargraph.write();
 
 			// Update the track number on the Pack.  Note this is really just used in testing
 			// When I have been starting each component out of sync
@@ -845,6 +854,10 @@ void initialiseState(State newState, unsigned long currentMillis) {
 	stateLastChanged = millis();
 
 	state = newState;
+}
+
+void stateUpdate() {
+	stateUpdate(millis());
 }
 
 unsigned long lastStateUpdate = 0;
@@ -873,8 +886,7 @@ void stateUpdate(unsigned long currentMillis) {
 			if (overheatMode &&  (currentMillis > stateLastChanged + OVERHEAT_TIME)) {
 				initialiseState(FIRING_WARN, currentMillis);
 			}
-
-			bargraphPeriod = max(bargraphFiringMinPeriod, bargraphPeriod - (bargraphFiringAcceleration * (currentMillis - lastStateUpdate)));
+			bargraphPeriod = max(bargraphFiringMinPeriod, bargraphFiringStartPeriod - (bargraphFiringAcceleration * (currentMillis - firingStart)));
 			break;
 
 		case FIRING_WARN:
@@ -882,7 +894,7 @@ void stateUpdate(unsigned long currentMillis) {
 				initialiseState(VENTING, currentMillis);
 			}
 
-			bargraphPeriod = max(bargraphFiringMinPeriod, bargraphPeriod - (bargraphFiringAcceleration * (currentMillis - lastStateUpdate)));
+			bargraphPeriod = max(bargraphFiringMinPeriod, bargraphFiringStartPeriod - (bargraphFiringAcceleration * (currentMillis - firingStart)));
 			break;
 
 		case VENTING:
@@ -895,7 +907,6 @@ void stateUpdate(unsigned long currentMillis) {
 			if (currentMillis > stateLastChanged + FIRING_STOP_TIME) {
 				initialiseState(IDLE, currentMillis);
 			}
-			//bargraphPeriod = min(bargraphIdlePeriod, bargraphPeriod - (bargraphFiringAcceleration * (currentMillis - lastStateUpdate)));
 			break;
 
 		case MUSIC_MODE:
@@ -937,6 +948,7 @@ void attachCmdMessengerCallbacks() {
 	cmdMessenger.attach(eventPackEncoderButton, onPackEncoderButton);
 	cmdMessenger.attach(eventPackEncoderTurn, onPackEncoderTurn);
 	cmdMessenger.attach(eventSetVolume, onPackSetVolume);
+	cmdMessenger.attach(eventSetSDTrack, onPackSetTrack);
 
 	cmdMessenger.attach(eventUpdateMusicPlayingState, onUpdateMusicPlayingState);
 }
@@ -951,6 +963,7 @@ void onUnknownCommand()
 //eventPackEncoderButton,
 //eventPackEncoderTurn,
 //eventSetVolume,
+//eventSetSDTrack,
 //eventUpdateMusicPlayingState,
 
 void onPackIonSwitch() {
@@ -983,6 +996,11 @@ void onPackEncoderTurn() {
 	int movement = cmdMessenger.readInt32Arg();
 
 	rotaryMove(millis(), movement);
+}
+
+void onPackSetTrack() {
+	int newTrack = cmdMessenger.readInt16Arg();
+	setSDTrack(millis(), newTrack);
 }
 
 void onPackSetVolume() {
@@ -1176,14 +1194,14 @@ void tipUpdate() {
 ----------------------- */
 void graphInit(unsigned long currentMillis) {
 	bargraph.init(0x70);
-	bargraph.setBrightness(12);
+	bargraph.setBrightness(10);
 	bargraphLitCells = 0;
 
 	clearBargraph(currentMillis);
+	bargraph.write();
 }
 
 void graphUpdate(unsigned long currentMillis) {
-	// TODO: Handle Graph Animations in file - rise, pulse, sweep
 	switch (state) {
 		case OFF:
 		case MUSIC_MODE:
@@ -1220,11 +1238,11 @@ void graphUpdate(unsigned long currentMillis) {
 				if (bargraphLitCells > 0) {
 					setBGLampRange(currentMillis, bargraphLitCells, bargraphLEDs, false);
 					bargraphLitCells--;
-					bargraph.write();
 				}
 				else {
 					clearBargraph(currentMillis);
 				}
+				bargraph.write();
 			}
 			break;
 
@@ -1232,18 +1250,16 @@ void graphUpdate(unsigned long currentMillis) {
 			// Terminate the animation during a ceasefire on the final climb
 			if (bargraphClimbing && (bargraphLitCells == (bargraphLEDs - bargraphFiringWidth + 1))) {
 				clearBargraph(currentMillis);
+				bargraph.write();
 				break;
 			}
 		case FIRING:
 		case FIRING_WARN:
-			// TODO: Potentially make the warning animation just flash?
-			if ((currentMillis - lastBargraphChange) > ((float)bargraphPeriod / (((float)0.5 * bargraphLEDs) - bargraphFiringWidth + 1))) {
+			if ((currentMillis - lastBargraphChange) > ((float)bargraphPeriod / ((0.5 * (float)bargraphLEDs) - bargraphFiringWidth + 1))) {
 				if ((bargraphClimbing && (bargraphLitCells == (bargraphLEDs - bargraphFiringWidth + 1))) || 
 					(!bargraphClimbing && (bargraphLitCells == 1 + (float)bargraphLEDs/2))) {
 					bargraphClimbing = !bargraphClimbing;
 				}
-
-				DEBUG_SERIAL.println(bargraphLitCells);
 
 				bargraphLitCells = bargraphLitCells + (bargraphClimbing ? 1 : -1);
 
@@ -1269,6 +1285,7 @@ void graphUpdate(unsigned long currentMillis) {
 			}
 			else {
 				clearBargraph(currentMillis);
+				bargraph.write();
 			}
 			break;
 

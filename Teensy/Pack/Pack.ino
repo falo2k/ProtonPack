@@ -232,7 +232,6 @@ void setup() {
     cycloTimer.set(cycloTimerPeriod, cycloUpdate);
     ventInit();
     ventTimer.set(ventTimerPeriod, ventUpdate);
-    ventTimer.disable();
 
     pcellLights.show();
     cycloLights.show();
@@ -936,7 +935,7 @@ void ventUpdate() {
 
     switch (state) {
     case VENTING:
-        // TODO: Vent animations
+        // TODO: Future venting with smoke
         break;
 
     default:

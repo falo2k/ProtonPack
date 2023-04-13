@@ -92,6 +92,9 @@ enum SerialCommands {
 	// TODO: Force State change?
 };
 
+#define configFile "config.ini"
+
+
 /*  ----------------------
 	Helper Functions
 	- Some of these are pulled from the adafruit neopixel 
