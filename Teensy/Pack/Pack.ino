@@ -14,6 +14,7 @@
 #include <CmdMessenger.h>
 #include <avdweb_Switch.h>
 #include <Encoder.h>
+#include <minINI.h>
 
 /*  ----------------------
     Variables to flip switch directions depending on
@@ -177,16 +178,14 @@ void setup() {
 
     // Set up the amplifier
     Wire.begin();
-    if (!setvolume(thevol)) {
-        DEBUG_SERIAL.println("Failed to set volume, MAX9744 not found!");
-        // Should loop here until ready - or loop for a small amount of time?
-        // // Error message over serial to display?
-        //while (1);
-    }
+    // This should now happen in the first call to load the config file
+    //if (!setvolume(theVol)) {
+    //    DEBUG_SERIAL.println("Failed to set volume, MAX9744 not found!");
+    //    // Should loop here until ready - or loop for a small amount of time?
+    //    // // Error message over serial to display?
+    //    //while (1);
+    //}
     
-    // Read config file from SD Card
-    // TODO: Config File Support
-
     // Initialise the audio board
     // Audio connections require memory to work.  For more
     // detailed information, see the MemoryAndCpuUsage example
@@ -194,8 +193,6 @@ void setup() {
     sgtl5000_1.enable();
     sgtl5000_1.volume(0.75);
     sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
-    //sgtl5000_1.unmuteLineout();
-    //sgtl5000_1.lineOutLevel(21);
     audioFFT.averageTogether(10);
     //audioFFT.windowFunction(NULL);
 
@@ -267,6 +264,32 @@ void loop() {
 }
 
 /*  ----------------------
+    Config Management
+----------------------- */
+void readConfigFile(unsigned long currentMillis) {
+    if (SD.exists(configFile)) {
+        DEBUG_SERIAL.println("Config File Found.  Reading Config.");
+        minIni ini(configFile);
+        theVol = ini.geti("", configVolume, defaultVol);
+        trackNumber = ini.geti("", configTrack, defaultTrack);
+    }
+    else {
+        DEBUG_SERIAL.println("No Config File Found.  Using Default values.");
+        trackNumber = defaultTrack;
+        theVol = defaultVol;
+    }
+}
+
+void writeConfigFile(unsigned long currentMillis) {
+    DEBUG_SERIAL.println("Saving config file to SD.");
+    
+    minIni ini(configFile);
+
+    ini.put("", configVolume, theVol);
+    ini.put("", configTrack, trackNumber);
+}
+
+/*  ----------------------
     Input Management
 ----------------------- */
 void setupInputs() {
@@ -296,7 +319,7 @@ void updateInputs(unsigned long currentMillis) {
 }
 
 void ionSwitchToggle(void* ref) {
-    DEBUG_SERIAL.print("ACT Switch: "); DEBUG_SERIAL.println(ionSwitch.on() ^ SW_ION_INVERT);
+    DEBUG_SERIAL.print("Ion Switch: "); DEBUG_SERIAL.println(ionSwitch.on() ^ SW_ION_INVERT);
 
     cmdMessenger.sendCmd(eventPackIonSwitch, ionSwitch.on() ^ SW_ION_INVERT);
 }
@@ -353,14 +376,14 @@ void playRandomTrack() {
 // volume to the i2c bus. That's it!
 boolean setvolume(int8_t v) {
     // cant be higher than 63 or lower than 0
-    if (v > maxvol) v = maxvol;
+    if (v > maxVol) v = maxVol;
     if (v < 0) v = 0;
 
-    DEBUG_SERIAL.print("Setting volume to ");
-    DEBUG_SERIAL.println(v);
+    if (v != theVol) {
+        DEBUG_SERIAL.printf("Setting volume to %i\n", v);
+    }
     Wire.beginTransmission(MAX9744_I2CADDR);
     Wire.write(v);
-    DEBUG_SERIAL.println("Volume Set");
     if (Wire.endTransmission() == 0)
         return true;
     else
@@ -396,6 +419,8 @@ void attachCmdMessengerCallbacks() {
     cmdMessenger.attach(eventSetSDTrack, onSetSDTrack);
     cmdMessenger.attach(eventPlayPauseSDTrack, onPlayPauseSDTrack);
     cmdMessenger.attach(eventStopSDTrack, onStopSDTrack);
+    cmdMessenger.attach(eventLoadConfig, onLoadConfig);
+    cmdMessenger.attach(eventWriteConfig, onWriteConfig);
 }
 
 void onUnknownCommand()
@@ -404,7 +429,7 @@ void onUnknownCommand()
 }
 
 void onSetVolume() {
-    int theVol = cmdMessenger.readInt16Arg();
+    theVol = cmdMessenger.readInt16Arg();
     setvolume(theVol);
 }
 
@@ -437,6 +462,7 @@ void onSetSDTrack() {
     int newTrackNumber = cmdMessenger.readInt16Arg();
 
     if (newTrackNumber != trackNumber) {
+        DEBUG_SERIAL.printf("Setting Track to %s\n", trackList[newTrackNumber][1]);
         trackNumber = newTrackNumber;
 
         if (sdFXChannel.isPlaying() || sdFXChannel.isPaused()) {
@@ -464,6 +490,16 @@ void onStopSDTrack() {
     if ((state == MUSIC_MODE) && !bluetoothMode) {
         sdFXChannel.stop();
     }
+}
+
+void onLoadConfig() {
+    readConfigFile(millis());
+    cmdMessenger.sendCmd(eventSetVolume, theVol);
+    cmdMessenger.sendCmd(eventSetSDTrack, trackNumber);
+}
+
+void onWriteConfig() {
+    writeConfigFile(millis());
 }
 
 /*  ----------------------
@@ -931,7 +967,7 @@ void ventInit() {
 }
 
 void ventUpdate() {
-    unsigned long currentMillis = millis();
+    //unsigned long currentMillis = millis();
 
     switch (state) {
     case VENTING:

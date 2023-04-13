@@ -26,11 +26,12 @@ https://github.com/cygig/TimerEvent
 
 
 ### OLED Menu System
-A long press on the Wand encoder will activate the menu (to avoid accidental bumps).  While active, a long press will also cancel the menu.  The menu has an automatic timeout so will not stay open indefinitely.
+A long press on the Wand encoder will activate the menu (to avoid accidental bumps).  While active, a long press will also cancel the menu.  The menu has an automatic timeout so will not stay open indefinitely.  Single click to select / confirm menu items
 
-Currently there are two sections for control:
-1. Volume: This changes the volume of the amplifier in the pack via i2c.
-2. Track Change: This lets you select the extact track you want queued up for playback from the SD card (if enabled).  Selecting a new track while one is playing will cause the new track to start immediately.  Note that using the next/prev track shortcuts on the INT/TIP buttons will display the new track name in the display.
+Currently there are three features for control:
+1. Volume: This changes the volume of the amplifier in the pack via i2c.  This will update as you turn the knob/
+2. Track Change: This lets you select the extact track you want queued up for playback from the SD card (if enabled).  Single click to confirm the selection, or long press to cancel.  Selecting a new track while one is playing will cause the new track to start immediately.  Note that using the next/prev track shortcuts on the INT/TIP buttons will display the new track name in the display.
+3. Load/Save Config: This will load or save the volume and track configuration to a file on the SD card.  This is loaded as the default when the pack is first powered
 
 ### Future Plans
 - Some pin headers in the pack are spare to support adding a smoke machine to the pack at a later date for venting.  This should be easy to trigger in software.

@@ -49,8 +49,9 @@ const char* sfxShutdown = "SFX/shutdown.wav"; // 2937
 const char* sfxSmoke = "SFX/smoke_01.wav"; // 2682
 const char* sfxVent = "SFX/vent.wav"; // 3495
 
-int8_t thevol = 31;
-int8_t maxvol = 63;
+int8_t theVol = 31;
+const int8_t defaultVol = 31;
+int8_t maxVol = 63;
 
 const uint32_t ledOff = Adafruit_NeoPixel::Color(0, 0, 0, 0);
 
@@ -66,7 +67,7 @@ enum State { OFF = 'O',
 
 enum ButtonEvent { PRESSED, HELD, RELEASED };
 
-enum displayStates { DISPLAY_OFF, TOP_MENU, VOLUME_CHANGE, VOLUME_DISPLAY, TRACK_SELECT, TRACK_DISPLAY, VENTMODE, INPUTSTATE, BOOT_LOGO, SAVE_SETTINGS };
+enum displayStates { DISPLAY_OFF, TOP_MENU, VOLUME_CHANGE, VOLUME_DISPLAY, TRACK_SELECT, TRACK_DISPLAY, BOOT_LOGO, LOAD_CONFIG, SAVE_CONFIG };
 
 // Hardware Serial Comms 
 // inintialize hardware constants
@@ -88,12 +89,13 @@ enum SerialCommands {
 	eventSetSDTrack,
 	eventPlayPauseSDTrack,
 	eventStopSDTrack,	
-	// TODO: Request and save config
-	// TODO: Force State change?
+	eventLoadConfig,
+	eventWriteConfig
 };
 
 #define configFile "config.ini"
-
+#define configVolume "Volume"
+#define configTrack "TrackNumber"
 
 /*  ----------------------
 	Helper Functions

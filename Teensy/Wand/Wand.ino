@@ -150,6 +150,8 @@ const unsigned int bargraphFiringStopPeriod = 1200;
 const int bargraphFiringWidth = 3;
 const float bargraphFiringAcceleration = 0.5;
 
+bool firstLoop = true;
+
 /*  ----------------------
 	Setup and Loops
 ----------------------- */
@@ -210,6 +212,12 @@ void setup() {
 }
 
 void loop() {
+	if (firstLoop) {
+		// Tell the pack to load the configuration file on first loop
+		cmdMessenger.sendCmd(eventLoadConfig);
+		firstLoop = false;
+	}
+
 	unsigned long currentMillis = millis();
 
 	// Get any updates from pack
@@ -297,17 +305,19 @@ void drawDisplay(unsigned long currentMillis) {
 
 	switch (displayState){
 		case TOP_MENU:
-			display.setFixedFont(ssd1306xled_font8x16);
+			display.setFixedFont(ssd1306xled_font6x8);
 			display.printFixed(10, 0, "Volume", STYLE_BOLD);
-			display.printFixed(10, 16, "Track Select", STYLE_BOLD);
-			display.printFixed(1, selectedIndex * 16, ">", STYLE_BOLD);
+			display.printFixed(10, 8, "Track Select", STYLE_BOLD);
+			display.printFixed(10, 16, "Load Config", STYLE_BOLD);
+			display.printFixed(10, 24, "Save Config", STYLE_BOLD);
+			display.printFixed(1, selectedIndex * 8, ">", STYLE_BOLD);
 			break;
 
 		case VOLUME_CHANGE:
 		case VOLUME_DISPLAY: {
 			display.setFixedFont(ssd1306xled_font8x16);
 			// XPos for header starts at 64 - (8*3)
-			int volPos = 14 - 8 + floor(100.0 * selectedIndex / maxvol);
+			int volPos = 14 - 8 + floor(100.0 * selectedIndex / maxVol);
 			char volStr[2];
 			sprintf(volStr, "%02d", selectedIndex);
 			display.printFixed(40, 0, "VOLUME", STYLE_BOLD);
@@ -331,6 +341,48 @@ void drawDisplay(unsigned long currentMillis) {
 			display.setFixedFont(ssd1306xled_font6x8);
 			DEBUG_SERIAL.print("Displaying Track Name: "); DEBUG_SERIAL.println(trackList[trackNumber][1]);
 			display.printFixed(0, 12, trackList[trackNumber][1], STYLE_BOLD);
+			break;
+
+		case LOAD_CONFIG:
+			display.setFixedFont(ssd1306xled_font8x16);
+			display.printFixed(64 - (6 * 8), 0, "Confirm Load", STYLE_BOLD);
+			if (selectedIndex == 0) {
+				display.printFixed(84 - (1.5 * 8), 16, "YES", STYLE_NORMAL);
+				display.printFixed(42 - 8 - (1.5 * 8), 16, ">", STYLE_BOLD);
+				display.printFixed(42 + 8 + (0.5 * 8), 16, "<", STYLE_BOLD);
+				display.invertColors();
+				display.printFixed(42 - 8, 16, "NO", STYLE_BOLD);
+				display.invertColors();
+			}
+			else {
+				display.printFixed(42 - 8, 16, "NO", STYLE_BOLD);
+				display.printFixed(84 - (1.5 * 8) - (1.5 * 8), 16, ">", STYLE_BOLD);
+				display.printFixed(84 + (1.5 * 8) + (0.5 * 8), 16, "<", STYLE_BOLD);
+				display.invertColors();
+				display.printFixed(84 - (1.5 * 8), 16, "YES", STYLE_NORMAL);
+				display.invertColors();
+			}
+			break;
+
+		case SAVE_CONFIG:
+			display.setFixedFont(ssd1306xled_font8x16);
+			display.printFixed(64 - (6 * 8), 0, "Confirm Save", STYLE_BOLD);
+			if (selectedIndex == 0) {
+				display.printFixed(84 - (1.5 * 8), 16, "YES", STYLE_NORMAL);
+				display.printFixed(42 - 8 - (1.5 * 8), 16, ">", STYLE_BOLD);
+				display.printFixed(42 + 8 + (0.5 * 8), 16, "<", STYLE_BOLD);
+				display.invertColors();
+				display.printFixed(42 - 8, 16, "NO", STYLE_BOLD);
+				display.invertColors();
+			}
+			else {
+				display.printFixed(42 - 8, 16, "NO", STYLE_BOLD);
+				display.printFixed(84 - (1.5 * 8) - (1.5 * 8), 16, ">", STYLE_BOLD);
+				display.printFixed(84 + (1.5 * 8) + (0.5 * 8), 16, "<", STYLE_BOLD);
+				display.invertColors();
+				display.printFixed(84 - (1.5 * 8), 16, "YES", STYLE_NORMAL);
+				display.invertColors();
+			}
 			break;
 
 		case DISPLAY_OFF:
@@ -591,29 +643,47 @@ void rotaryButtonLongPress(void* ref) {
 	case DISPLAY_OFF:
 		displayState = TOP_MENU;
 		selectedIndex = 0;
-		drawDisplay(currentMillis);
 		break;
 
 	case TOP_MENU:
 		displayState = DISPLAY_OFF;
 		selectedIndex = 0;
-		drawDisplay(currentMillis);
 		break;
 
 	case VOLUME_DISPLAY:
 		displayState = VOLUME_CHANGE;
-		drawDisplay(currentMillis);
 		break;
 
 	case TRACK_DISPLAY:
 		displayState = TRACK_SELECT;
 		selectedIndex = trackNumber;
-		drawDisplay(currentMillis);
+		break;
+
+	case VOLUME_CHANGE:
+		displayState = TOP_MENU;
+		selectedIndex = 0;
+		break;
+
+	case TRACK_SELECT:
+		displayState = TOP_MENU;
+		selectedIndex = 1;
+		break;
+	
+	case LOAD_CONFIG:
+		displayState = TOP_MENU;
+		selectedIndex = 2;
+		break;
+
+	case SAVE_CONFIG:
+		displayState = TOP_MENU;
+		selectedIndex = 3;
 		break;
 		
 	default:
 		break;
 	}
+
+	drawDisplay(currentMillis);
 
 	DEBUG_SERIAL.println("Rotary Held");
 }
@@ -634,7 +704,7 @@ void rotaryButtonRelease(void* ref) {
 			DEBUG_SERIAL.print("Selected Top Menu Item: "); DEBUG_SERIAL.println(selectedIndex);
 			switch (selectedIndex) {
 				case 0:
-					selectedIndex = thevol;
+					selectedIndex = theVol;
 					displayState = VOLUME_CHANGE;
 					break;
 
@@ -643,26 +713,49 @@ void rotaryButtonRelease(void* ref) {
 					displayState = TRACK_SELECT;
 					break;
 
+				case 2:
+					selectedIndex = 0;
+					displayState = LOAD_CONFIG;
+					break;
+
+				case 3:
+					selectedIndex = 0;
+					displayState = SAVE_CONFIG;
+					break;
+
 				default:
 					break;
 			}
-			
-			drawDisplay(currentMillis);
-			return;
+			break;
 
 		case VOLUME_CHANGE:
 			setVolume(currentMillis, selectedIndex);
 			selectedIndex = 0;
 			displayState = TOP_MENU;			
-			drawDisplay(currentMillis);
-			return;
+			break;
 
 		case TRACK_SELECT:
 			setSDTrack(currentMillis, selectedIndex);
-			selectedIndex = 0;
+			selectedIndex = 1;
 			displayState = TOP_MENU;
-			drawDisplay(currentMillis);
-			return;
+			break;
+
+		case LOAD_CONFIG:
+			if (selectedIndex == 1) {
+				cmdMessenger.sendCmd(eventLoadConfig);
+			}
+
+			selectedIndex = 2;
+			displayState = TOP_MENU;
+			break;
+		case SAVE_CONFIG:
+			if (selectedIndex == 1) {
+				cmdMessenger.sendCmd(eventWriteConfig);
+			}
+
+			selectedIndex = 3;
+			displayState = TOP_MENU;
+			break;
 
 		case DISPLAY_OFF:
 		case VOLUME_DISPLAY:
@@ -670,22 +763,29 @@ void rotaryButtonRelease(void* ref) {
 		default:
 			break;
 	}
+
+	drawDisplay(currentMillis);
 }
 
 void rotaryMove(unsigned long currentMillis, int movement) {
 	if (displayState != DISPLAY_OFF) {
 		switch (displayState) {
 			case TOP_MENU:
-				selectedIndex = looparound((selectedIndex + movement) , 2);
+				selectedIndex = looparound((selectedIndex + movement) , 4);
 				break;
 
 			case VOLUME_CHANGE:
-				selectedIndex = constrain(selectedIndex + movement, 0, maxvol);
+				selectedIndex = constrain(selectedIndex + movement, 0, maxVol);
 				setVolume(currentMillis, selectedIndex);
 				break;
 
 			case TRACK_SELECT:
 				selectedIndex = looparound((selectedIndex + movement) , trackCount);
+				break;
+
+			case LOAD_CONFIG:
+			case SAVE_CONFIG:
+				selectedIndex = looparound((selectedIndex + movement), 2);
 				break;
 
 			default:
@@ -931,10 +1031,10 @@ void setSDTrack(unsigned long currentMillis, int newTrackNumber) {
 }
 
 void setVolume(unsigned long currentMillis, int newVolume) {
-	thevol = newVolume;
+	theVol = newVolume;
 
 	cmdMessenger.sendCmdStart(eventSetVolume);
-	cmdMessenger.sendCmdArg(thevol);
+	cmdMessenger.sendCmdArg(theVol);
 	cmdMessenger.sendCmdEnd();
 }
 
@@ -1000,17 +1100,18 @@ void onPackEncoderTurn() {
 
 void onPackSetTrack() {
 	int newTrack = cmdMessenger.readInt16Arg();
+	DEBUG_SERIAL.printf("Pack Requested Track Change To: %s\n", trackList[newTrack][1]);
 	setSDTrack(millis(), newTrack);
 }
 
 void onPackSetVolume() {
 	int newVol = cmdMessenger.readInt16Arg();
+	DEBUG_SERIAL.printf("Pack Requested Volume Change To: %i\n", newVol);
 	setVolume(millis(), newVol);
 }
 
 void onUpdateMusicPlayingState() {
 	bool playingState = cmdMessenger.readBoolArg();
-
 	musicPlaying = playingState;
 }
 
