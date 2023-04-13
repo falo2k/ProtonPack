@@ -74,7 +74,6 @@
   <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Label="Shared">
     <Import Project="..\ProtonPackCommon\ProtonPackCommon.vcxitems" Label="Shared" />
-    <Import Project="D:\UserProfile\Documents\Arduino\libraries\Bounce2\Bounce2-2.71.vcxitems" Label="Shared" />
     <Import Project="D:\UserProfile\Documents\Arduino\libraries\CmdMessenger\CmdMessenger-4.0.0.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" />
