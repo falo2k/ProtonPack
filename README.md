@@ -18,40 +18,49 @@ The Wand sketch does all state management, and will update the Pack sketch as ne
 You'll need the libraries listed in the section below.
 
 ### Libraries
-[minIni for Arduino](https://github.com/lipoyang/minIni4Arduino) - Config file saving/loading with the SD card
-[LCDGFX](https://github.com/lexus2k/lcdgfx/) - Drives the OLED display
-[CmdMessenger](https://github.com/thijse/Arduino-CmdMessenger) - Manages serial connection between both boards with callbacks
-[Encoder](https://github.com/PaulStoffregen/Encoder) - Converts rotary encoder inputs to movement
-[HT16K33](https://github.com/jonpearse/ht16k33-arduino) - Basic library for controlling the LED matrix backpack/bargraph.
-[NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel) - The Adafruit NeoPixel library.  Considered using FastLED, but as I had GRBW LEDs in stock (and wanted them for some parts) I stuck with the Adafruit library.
-[TimerEvent](https://github.com/cygig/TimerEvent) - A library for managing timing of updates (helping to banish unnecessary delay() calls)
-[Switch](https://github.com/avandalen/avdweb_Switch) - Primarily used for the debouncing and callback features for switches.  Detects events for pressing, holding, and releasing.
+[minIni for Arduino](https://github.com/lipoyang/minIni4Arduino) - Config file saving/loading with the SD card  
+[LCDGFX](https://github.com/lexus2k/lcdgfx/) - Drives the OLED display  
+[CmdMessenger](https://github.com/thijse/Arduino-CmdMessenger) - Manages serial connection between both boards with callbacks  
+[Encoder](https://github.com/PaulStoffregen/Encoder) - Converts rotary encoder inputs to movement  
+[HT16K33](https://github.com/jonpearse/ht16k33-arduino) - Basic library for controlling the LED matrix backpack/bargraph.  
+[NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel) - The Adafruit NeoPixel library.  Considered using FastLED, but as I had GRBW LEDs in stock (and wanted them for some parts) I stuck with the Adafruit library.  
+[TimerEvent](https://github.com/cygig/TimerEvent) - A library for managing timing of updates (helping to banish unnecessary delay() calls)  
+[Switch](https://github.com/avandalen/avdweb_Switch) - Primarily used for the debouncing and callback features for switches.  Detects events for pressing, holding, and releasing.  
 
 ### Pack Operation
 Once power is on to both boards, they will start up in the state determined by the current switch positions, so you can switch straight into music mode if you want.
 
-Act Switch on Left Box
- : This toggles the pack power for both movie and music mode.
-Lower Switch Next to Bargraph
- : In movie mode this toggles whether or not the overheat warning will kick in after a period of time and then move to venting after further warning.  If off, firing will continue indefinitely.  In music mode, this is used to toggle the Bluetooth module on, which will then stop any playback from the SD card.
-Upper Switch Next to Bargraph
- : This switches between movie mode (off) and music mode (on)
-Int Button on Left Box
- : In movie mode, this will cause the pack to fire while held.  In music mode a single press will act as a play/pause button, while a long press will move to the next track in the list.
-Tip Button
- : In movie mode, this will cause the pack to fire while held.  If single pressed, it will cause a venting routing to kick off.  In music mode a single press will act as a stop button, while a long press will move to the previous track in the list.
-Pack Crank Knob
- : Connected to an encoder, this will currently just mimic the behaviour of the wand encoder (see the OLED Menu System below).
-Pack Ion Switch
- : Currently unused.
+**Act Switch on Left Box**  
+- This toggles the pack power for both movie and music mode.
+
+**Lower Switch Next to Bargraph**  
+- In movie mode this toggles whether or not the overheat warning will kick in after a period of time and then move to venting after further warning.  If off, firing will continue indefinitely.  
+- In music mode, this is used to toggle the Bluetooth module on, which will then stop any playback from the SD card.
+
+**Upper Switch Next to Bargraph**  
+- This switches between movie mode (off) and music mode (on)
+
+**Int Button on Left Box**  
+- In movie mode, this will cause the pack to fire while held.  
+- In music mode a single press will act as a play/pause button, while a long press will move to the next track in the list.
+
+**Tip Button**  
+- In movie mode, this will cause the pack to fire while held.  If single pressed, it will cause a venting routing to kick off.  
+- In music mode a single press will act as a stop button, while a long press will move to the previous track in the list.
+
+**Pack Crank Knob**  
+- Connected to an encoder, this will currently just mimic the behaviour of the wand encoder (see the OLED Menu System below).
+
+**Pack Ion Switch**  
+- Currently unused.
 
 ### OLED Menu System
 A long press on the Wand encoder will activate the menu (to avoid accidental bumps).  While active, a long press will also cancel the menu.  The menu has an automatic timeout so will not stay open indefinitely.  Single click to select / confirm menu items
 
-Currently there are three features for control:
-1. Volume: This changes the volume of the amplifier in the pack via i2c.  This will update as you turn the knob/
-2. Track Change: This lets you select the extact track you want queued up for playback from the SD card (if enabled).  Single click to confirm the selection, or long press to cancel.  Selecting a new track while one is playing will cause the new track to start immediately.  Note that using the next/prev track shortcuts on the INT/TIP buttons will display the new track name in the display.
-3. Load/Save Config: This will load or save the volume and track configuration to a file on the SD card.  This is loaded as the default when the pack is first powered
+Currently there are three features for control:  
+1. **Volume**: This changes the volume of the amplifier in the pack via i2c.  This will update as you turn the knob.  
+2. **Track Change**: This lets you select the extact track you want queued up for playback from the SD card (if enabled).  Single click to confirm the selection, or long press to cancel.  Selecting a new track while one is playing will cause the new track to start immediately.  Note that using the next/prev track shortcuts on the INT/TIP buttons will display the new track name in the display.  
+3. **Load/Save Config**: This will load or save the volume and track configuration to a file on the SD card.  This is loaded as the default when the pack is first powered  
 
 ### Future Plans
 - Some pin headers in the pack are already spare to support adding a smoke machine to the pack at a later date for venting (market as IO2 on the PCB).  This should be easy to trigger in software.
@@ -64,42 +73,42 @@ Currently there are three features for control:
 ### BOM
 Where I can remember it, I've listed the Equipment used and links to purchase below.  You may find other sources are better for availability (Mouser, Digikey, etc.).  As with all of these types of projects, it depends exactly how you're planning to mount your electronics, so I'd advise thinking about your layout before purchasing.
 
-**Controllers**
- 1 x [Teensy LC](https://www.pjrc.com/store/teensylc.html).  Would be fine using a Teensy 4.0 here as well if availability is a challenge
- 1 x [Teensy 4.0](https://www.pjrc.com/store/teensy40.html)
- 1 x [Teensy Audio Board Rev D](https://www.pjrc.com/store/teensy3_audio.html)
- 1 x [Teensy Stacking Header Kit](https://www.adafruit.com/product/3883).  For the audio board to stack on the Teensy 4.0.  This was the easiest source of 14 pin stackable headers I could find.  If not using PCBs then you may just stick with non-stacking headers here.
- 4 x [14x1R Pins](https://www.pjrc.com/store/header_14x1.html) for the Teensy boards
- 4 x [14x1R Headers](https://www.pjrc.com/store/socket_14x1.html) for the PCBs
- 1 x 5x2R Header for the PCB connection to the audio inputs/outputs on the board
- 1 x Micro SD Card for the Audio Adapter.  See the Audio Adapter product page for up to date recommendations.  Not much is stored on here so you can get away with a fairly small card, but if you want to load more songs on YMMV.
+**Controllers**  
+ 1 x [Teensy LC](https://www.pjrc.com/store/teensylc.html).  Would be fine using a Teensy 4.0 here as well if availability is a challenge  
+ 1 x [Teensy 4.0](https://www.pjrc.com/store/teensy40.html)  
+ 1 x [Teensy Audio Board Rev D](https://www.pjrc.com/store/teensy3_audio.html)  
+ 1 x [Teensy Stacking Header Kit](https://www.adafruit.com/product/3883).  For the audio board to stack on the Teensy 4.0.  This was the easiest source of 14 pin stackable headers I could find.  If not using PCBs then you may just stick with non-stacking headers here.  
+ 4 x [14x1R Pins](https://www.pjrc.com/store/header_14x1.html) for the Teensy boards  
+ 4 x [14x1R Headers](https://www.pjrc.com/store/socket_14x1.html) for the PCBs  
+ 1 x 5x2R Header for the PCB connection to the audio inputs/outputs on the board  
+ 1 x Micro SD Card for the Audio Adapter.  See the Audio Adapter product page for up to date recommendations.  Not much is stored on here so you can get away with a fairly small card, but if you want to load more songs on YMMV.  
 
-**Premade Boards**
-1 x [Adafruit 16x8 LED Matrix Driver Backpack - HT16K33 Breakout](https://www.adafruit.com/product/1427) for driving the bargraph.
-*TBC*
-Mosfet boards, amp, bluetooth controller
+**Premade Boards**  
+1 x [Adafruit 16x8 LED Matrix Driver Backpack - HT16K33 Breakout](https://www.adafruit.com/product/1427) for driving the bargraph.  
+*TBC*  
+Mosfet boards, amp, bluetooth controller  
 
-**Buttons and Switches**
-*TBC*
-toggles, momentary, ion switch, encoders
+**Buttons and Switches**  
+*TBC*  
+toggles, momentary, ion switch, encoders  
 
-**LEDs**
-*TBC*
-strips for pcell, individuals for cyclotron, vent, body, tip, jewel for barrel, bargraph (with notes for common anode/cathod)
+**LEDs**  
+*TBC*  
+strips for pcell, individuals for cyclotron, vent, body, tip, jewel for barrel, bargraph (with notes for common anode/cathode)  
 
-**Capacitors and Resistors**
-*TBC*
-pullups, neopixels, filters
+**Capacitors and Resistors**  
+*TBC*  
+pullups, neopixels, filters  
 
-**Connectors (for PCB)**
-*TBC*
-JST-XH, terminal connectors, dupont
+**Connectors (for PCB)**  
+*TBC*  
+JST-XH, terminal connectors, dupont  
 
-**Other**
- 2 x [74AHCT125 Level Shifters](https://www.adafruit.com/product/1787) for driving the Neopixels as the Teensy uses 3.3V logic.  You may get away without these, but better safe than sorry.
- 2 x [14 Pin IC Sockets](https://www.digikey.co.uk/en/products/detail/cnc-tech/245-14-1-03/3441580) for mounting the above into the PCBs (or you can just solder them in).
-*TBC*
-OLED Display, thumb nut for encoder
+**Other**  
+ 2 x [74AHCT125 Level Shifters](https://www.adafruit.com/product/1787) for driving the Neopixels as the Teensy uses 3.3V logic.  You may get away without these, but better safe than sorry.  
+ 2 x [14 Pin IC Sockets](https://www.digikey.co.uk/en/products/detail/cnc-tech/245-14-1-03/3441580) for mounting the above into the PCBs (or you can just solder them in).  
+*TBC*  
+OLED Display, thumb nut for encoder  
 
 ### PCBs
 I have created a couple of PCBs to make installation neater in a Q-Pack.  I've shared the production files in the PCBs folder for use with [JLCPCB](https://jlcpcb.com/).  I used Altium Circuitmaker to create these, so it's hard to share a useful copy of them.  I plan at some point to migrate these to KiCad but that requires time to learn KiCad.  It'll probably happen when I start working on a better belt gizmo :)  
@@ -108,14 +117,14 @@ The folder also contains STLs to mount the boards and keep the solder joins clea
 
 *TBD Supporting Images*
 
-Revision 1.0: Initial release of boards
-Revision 1.1: Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.
+*Revision 1.0:* Initial release of boards  
+*Revision 1.1:* Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.
 
 ### Power
 I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.
 
 ## Thanks
-A huge thanks to everyone over on the [Arduino for Ghostbusters Props](https://www.facebook.com/groups/1187612118706042/) Facebook group.  Special shout outs to:
+A huge thanks to everyone over on the [Arduino for Ghostbusters Props](https://www.facebook.com/groups/1187612118706042/) Facebook group.  Special shout outs to:  
 - Chris Rossi for steering me towards the Teensy in the first place
 - Kevin Delcourt for his excellent github documentation.  Inspired me to take a different approach to fixing the top knob to the encoder!
 - Quentin Machiels and Taco Belli over at [3D Printed Ghostbusters Props](https://www.facebook.com/groups/3DprintedGBprops/), without whom I would not have a pack to build this into
