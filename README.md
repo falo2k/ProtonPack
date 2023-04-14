@@ -1,3 +1,5 @@
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/V7V6KE7PQ)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?business=ESPELHR7Z3MMJ&no_recurring=0&item_name=Coffee+makes+the+world+go+round&currency_code=GBP)
 # Teensy Based Proton Pack Electronics
 This is my implementation of the electronics for a Ghostbusters Proton Pack.  It uses a Teensy microcontroller in both parts of the kit (Pack and Wand) and communicates between them over 4 wires (power + serial).  For now I have kept it to a simple movie implementation with some additions - overheating and music playback.  I've added two features that are a bit unusual:
 - An OLED display in the rear box on the wand is used for managing volume control and track selection, in conjunctions with a rotary encoder (push/turn) in the top knob.
