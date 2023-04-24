@@ -138,6 +138,10 @@ The folder also contains STLs to mount the boards and keep the solder joins clea
 ### Power
 I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V output or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my 12V talentcell battery and avoid noise issues going to the amp.  6W is overspecced (in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence).
 
+## Useful Models
+I'm slowly going over my library of replacement parts and jigs that I've made over the course of this build and exporting them into the [STLs](./STLs/) folder.  Things like board mounts are generally reusable either with my PCBs or the off-the-shelf boards listed above.  Some bits I've made are very specific to my build so probably not of interest to others.  Have a play with Fusion 360 - you'll both love and hate yourself as a result :)  
+If you see any others I'm using in photos and want to get hold of them, let me know.  
+
 ## Thanks
 A huge thanks to everyone over on the [Arduino for Ghostbusters Props](https://www.facebook.com/groups/1187612118706042/) Facebook group.  Special shout outs to:  
 - Chris Rossi for steering me towards the Teensy in the first place
