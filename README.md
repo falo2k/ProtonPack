@@ -30,7 +30,7 @@ You'll need the libraries listed in the section below.
 [Switch](https://github.com/avandalen/avdweb_Switch) - Primarily used for the debouncing and callback features for switches.  Detects events for pressing, holding, and releasing.  
 
 ### Pack Operation
-Once power is on to both boards, they will start up in the state determined by the current switch positions, so you can switch straight into music mode if you want.
+Once power is on to both boards, they will start up in the state determined by the current switch positions, so you can switch straight into music mode if you want.  If the pack is booted without a wand connected, it will enter bluetooth mode after 5 seconds.  
 
 **Act Switch on Left Box**  
 - This toggles the pack power for both movie and music mode.
@@ -65,7 +65,7 @@ Currently there are three features for control:
 3. **Load/Save Config**: This will load or save the volume and track configuration to a file on the SD card.  This is loaded as the default when the pack is first powered  
 
 ### Future Plans
-- Some pin headers in the pack are already spare to support adding a smoke machine to the pack at a later date for venting (market as IO2 on the PCB).  This should be easy to trigger in software.
+- Some pin headers in the pack are already spare to support adding a smoke machine to the pack at a later date for venting (marked as IO2 on the PCB).  This should be easy to trigger in software.
 - Alternative lighting schemes, sounds, animations, etc. can be added relatively easily.  Switching would probably be done with additional menu items through the OLED controls.
 - I'd like to add more granular volume control, again through the menu, to individually tweak the volume of SFX, Music, and Bluetooth channels.
 - The Ion Switch input currently doesn't do anything.  I may use this as either a hard or soft toggle for any future smoke effects.
@@ -88,12 +88,19 @@ Where I can remember it, I've listed the Equipment used and links to purchase be
 
 **Premade Boards**  
 1 x [Adafruit 16x8 LED Matrix Driver Backpack - HT16K33 Breakout](https://www.adafruit.com/product/1427) for driving the bargraph.  
-*TBC*  
-Mosfet boards, amp, bluetooth controller  
+1 x [DFRobot Mosfet Controller DFR0457](https://wiki.dfrobot.com/Gravity__MOSFET_Power_Controller_SKU__DFR0457) to switch the bluetooth board  
+1 x [Adafruit 20W Class D Amplifier](https://www.adafruit.com/product/1752)  
+1 x [Bluetooth Audio Board](https://www.aliexpress.com/item/1005004753541997.html). Comes as a wireless stereo pair.  
 
 **Buttons and Switches**  
-*TBC*  
-toggles, momentary, ion switch, encoders  
+3 x [2 Position MTS102 mini toggle switches](https://www.amazon.co.uk/gp/product/B01BWL7Z44/) for wand  
+1 x [Black Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B00TXNXU4S)
+1 x [Red Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B008ZYE9LY)
+2 x [EC11 Rotary Encoder with Switch](https://www.ebay.co.uk/sch/i.html?_from=R40&_trksid=p2380057.m570.l1313&_nkw=ec11+rotary+encoder&_sacat=0) for the pack (crank) and wand (top / front knob).
+
+Ion switches can be picked up on Etsy.  
+
+I also use some of [these](https://www.digikey.co.uk/en/products/detail/e-switch/100DP1T1B1M1QEH/378867) to switch on/off and choose charging vs electronics power for my internally mounted [Talentcell battery](https://talentcell.com/lithium-ion-battery/12v/yb1206000-usb.html).
 
 **LEDs**  
 *TBC*  
@@ -103,15 +110,20 @@ strips for pcell, individuals for cyclotron, vent, body, tip, jewel for barrel, 
 *TBC*  
 pullups, neopixels, filters  
 
-**Connectors (for PCB)**  
-*TBC*  
-JST-XH, terminal connectors, dupont  
+**Connectors (for PCB / wiring)**  
+Source these where you like depending on how many you need / want for other projects.  I tend to buy bulk lots from AliExpress.  
+- JST-XH connectors and headers for the boards and cables (2,3,4 pin)  
+- Screw terminals for the boards (2 pin, )  
+- Dupont connectors
+- JST-SM for wire to wire connectors (handy locking wire to wire options)  
+- JST-PH connectors (2,3 pin) for some of the smaller connectors on the DFRobot boards and the bluetooth board  
+- An assortment of Wago221s because they're brilliant  
 
 **Other**  
- 2 x [74AHCT125 Level Shifters](https://www.adafruit.com/product/1787) for driving the Neopixels as the Teensy uses 3.3V logic.  You may get away without these, but better safe than sorry.  
- 2 x [14 Pin IC Sockets](https://www.digikey.co.uk/en/products/detail/cnc-tech/245-14-1-03/3441580) for mounting the above into the PCBs (or you can just solder them in).  
-*TBC*  
-OLED Display, thumb nut for encoder  
+2 x [74AHCT125 Level Shifters](https://www.adafruit.com/product/1787) for driving the Neopixels as the Teensy uses 3.3V logic.  You may get away without these, but better safe than sorry.  
+2 x [14 Pin IC Sockets](https://www.digikey.co.uk/en/products/detail/cnc-tech/245-14-1-03/3441580) for mounting the above into the PCBs (or you can just solder them in).  
+1 x [0.91-inch OLED Display SSD1306](https://www.amazon.co.uk/gp/product/B07V8B3LSR)
+1 x [M6 Thumb Nut](https://www.aliexpress.com/item/1005003320281166.html) for the top knob on the wand.  I drilled out a 2.5 mm hole in the side, tapped it for M3 and used a grub screw to attach it to an encoder.  The top is capped with a cut-off and glued countersunk bolt head.
 
 ### PCBs
 I have created a couple of PCBs to make installation neater in a Q-Pack.  I've shared the production files in the PCBs folder for use with [JLCPCB](https://jlcpcb.com/).  I used Altium Circuitmaker to create these, so it's hard to share a useful copy of them.  I plan at some point to migrate these to KiCad but that requires time to learn KiCad.  It'll probably happen when I start working on a better belt gizmo :)  
@@ -124,7 +136,7 @@ The folder also contains STLs to mount the boards and keep the solder joins clea
 *Revision 1.1:* Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.
 
 ### Power
-I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my talentcell battery and avoid noise issues going to the amp.  6W is overspecced (in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence).
+I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V output or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my 12V talentcell battery and avoid noise issues going to the amp.  6W is overspecced (in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence).
 
 ## Thanks
 A huge thanks to everyone over on the [Arduino for Ghostbusters Props](https://www.facebook.com/groups/1187612118706042/) Facebook group.  Special shout outs to:  
