@@ -4,7 +4,7 @@
 This is my implementation of the electronics for a Ghostbusters Proton Pack.  It uses a Teensy microcontroller in both parts of the kit (Pack and Wand) and communicates between them over 4 wires (power + serial).  For now I have kept it to a simple movie implementation with some additions - overheating and music playback.  I've added two features that are a bit unusual:
 - An OLED display in the rear box on the wand is used for managing volume control and track selection, in conjunctions with a rotary encoder (push/turn) in the top knob.
 - A bluetooth receiver can be turned on for playback of anything not available on the SD card.  The module I'm using will mix the stereo audio down to mono for a single pack, but comes as a pair for True Wireless Stereo.  The other board will be in a friend's pack so we can use the packs as a complete speaker set.
-
+  
 It is designed to fit inside the 3D printed pack available [here - the Q-Pack](https://github.com/mr-kiou/q-pack).  It's been developed for a Mk3 pack - I will review it at some point in the future for Mk4 compatability.
 
 *TBD Demo Video*
@@ -14,9 +14,9 @@ The code is set up as a VS solution/project set using [Visual Micro](https://www
 - Wand.ino for the Wand sketch on the Teensy LC
 - Pack.ino for the Pack sketch on the Teensy 4.0
 - ProtonPackCommon.h which is used by both for some shared enums, timers, etc.
-
+  
 The Wand sketch does all state management, and will update the Pack sketch as necessary over serial.  If you want to tweak speeds, animations, direction of switches, etc. then you should find the right data to change either above the setup() functions in each file, or within the common header.
-
+  
 You'll need the libraries listed in the section below.
 
 ### Libraries
@@ -74,7 +74,7 @@ Currently there are three features for control:
 
 ## Hardware
 ### BOM
-Where I can remember it, I've listed the Equipment used and links to purchase below.  You may find other sources are better for availability (Mouser, Digikey, etc.).  As with all of these types of projects, it depends exactly how you're planning to mount your electronics, so I'd advise thinking about your layout before purchasing.
+Where I can remember it, I've listed the Equipment used and links to purchase below.  You may find other sources are better for availability (Mouser, Digikey, etc.).  As with all of these types of projects, it depends exactly how you're planning to mount your electronics, so I'd advise thinking about your layout before purchasing.  
 
 **Controllers**  
  1 x [Teensy LC](https://www.pjrc.com/store/teensylc.html).  Would be fine using a Teensy 4.0 here as well if availability is a challenge  
@@ -97,27 +97,32 @@ Where I can remember it, I've listed the Equipment used and links to purchase be
 1 x [Black Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B00TXNXU4S)
 1 x [Red Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B008ZYE9LY)
 2 x [EC11 Rotary Encoder with Switch](https://www.ebay.co.uk/sch/i.html?_from=R40&_trksid=p2380057.m570.l1313&_nkw=ec11+rotary+encoder&_sacat=0) for the pack (crank) and wand (top / front knob).
-
+  
 Ion switches can be picked up on Etsy.  
-
+  
 I also use some of [these](https://www.digikey.co.uk/en/products/detail/e-switch/100DP1T1B1M1QEH/378867) to switch on/off and choose charging vs electronics power for my internally mounted [Talentcell battery](https://talentcell.com/lithium-ion-battery/12v/yb1206000-usb.html).
 
 **LEDs**  
-*TBC*  
-strips for pcell, individuals for cyclotron, vent, body, tip, jewel for barrel, bargraph (with notes for common anode/cathode)  
+You may want to do your own LEDs.  Numbers and type can be varied in the code, though I haven't allowed for cyclotron LEDs that are more than a single addressable LED in a chain.  You may want to use the 7 LED jewels, though I found they were unnecessary for brightness and just ramped up power consumption for the sake of it.  
+1 x [144LEDs/m SK6812 RGBW Strip](https://www.aliexpress.com/item/32476317187.html?spm=a2g0o.order_list.order_list_main.5.74871802yO2AMH).  144 LEDs/m is just enough density to give you 15 LEDs in the Power Cell.  You can get a minimum length if you like.  
+13+ x [SK6812 RGBW Chips](https://www.aliexpress.com/item/1005002509850925.html?spm=a2g0o.order_list.order_list_main.29.74871802yO2AMH) which I use in the wand, pack vent, and for the cyclotron.  Worth getting some spares in case you fry one.  
+1 x [RGBW LED jewel](https://www.aliexpress.com/item/32825068416.html?spm=a2g0o.order_list.order_list_main.56.74871802yO2AMH) for the barrel light
+1 x [28 Segment Bar Graph](http://www.barmeter.com/download/bl28-3005sda04y.pdf).  Sourcing for this always ends up out of date, so hunt around Aliexpress or try asking on one of the FB groups.  Note that there are two versions of this bargraph, a common anode and common cathode version.  My code is designed for the BL28-3005SDK04Y model (note the A or K in the model name differentiating them).  It can be adapted for the other by simply changing the array mapping in the common header to point to the correct row/column references for your model.
 
 **Capacitors and Resistors**  
-*TBC*  
-pullups, neopixels, filters  
+4 x 4.7K Ohm Resistors for pullups on the Teensy i2c lines
+6 x 220 Ohm Resistors for neopixel data inputs
+2 x 100 uF Capacitors for neopixel power inputs (these may not be necessary depending on the pixels you're using - I'm keeping them in as they don't harm)
 
 **Connectors (for PCB / wiring)**  
-Source these where you like depending on how many you need / want for other projects.  I tend to buy bulk lots from AliExpress.  
-- JST-XH connectors and headers for the boards and cables (2,3,4 pin)  
-- Screw terminals for the boards (2 pin, )  
-- Dupont connectors
-- JST-SM for wire to wire connectors (handy locking wire to wire options)  
-- JST-PH connectors (2,3 pin) for some of the smaller connectors on the DFRobot boards and the bluetooth board  
-- An assortment of Wago221s because they're brilliant  
+Source these where you like depending on how many you need / want for other projects.  I tend to buy bulk lots from AliExpress.  You can count up the exact number you need, but I always find I need more so I'll leave them open ended :)  
+- [JST-XH connectors and headers](https://www.digikey.co.uk/en/product-highlight/j/jst/xh-series-connectors) for the boards and cables (2,3,4 pin)  
+- [Screw terminal blocks](https://www.digikey.co.uk/en/products/detail/phoenix-contact/1729018/260604) (2 pin, 5mm pitch) 
+- [Dupont connectors](https://www.amazon.co.uk/dupont-connectors/s?k=dupont+connectors)
+- [JST-SM wire to wire connectors](https://www.amazon.co.uk/Aussel-Connector-Housing-Assortment-Kit-560PCS-2-5mm-JST-SM-Connector-560PCS/dp/B0716JMHNJ/ref=sr_1_5?crid=1V0JLS666ZR6J&keywords=jst+sm+kit&qid=1682347520&sprefix=jst+sm+kit%2Caps%2C67&sr=8-5) for  (handy locking wire to wire options)  
+- [JST-PH connectors](https://www.amazon.co.uk/RUNCCI-YUN-540Pcs-Connector-Housing-Adapter/dp/B092LWQJHN/ref=sr_1_7?crid=V8F2IT2RMUFS&keywords=jst%2Bph%2Bkit&qid=1682347555&sprefix=jst%2Bph%2Bkit%2Caps%2C65&sr=8-7&th=1) (2,3 pin) for some of the smaller connectors on the DFRobot boards and the bluetooth board  
+- An assortment of [Wago221s](https://www.amazon.co.uk/s?k=wago+221) because they're brilliant for patching cables together with quick release  
+- [2 Pairs of 4 pin aviation connectors](https://www.amazon.co.uk/gp/product/B09WXZNKXN/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1) which I use to carry the serial/power to and from the wand while allowing a quick release.
 
 **Other**  
 2 x [74AHCT125 Level Shifters](https://www.adafruit.com/product/1787) for driving the Neopixels as the Teensy uses 3.3V logic.  You may get away without these, but better safe than sorry.  
@@ -127,19 +132,20 @@ Source these where you like depending on how many you need / want for other proj
 
 ### PCBs
 I have created a couple of PCBs to make installation neater in a Q-Pack.  I've shared the production files in the PCBs folder for use with [JLCPCB](https://jlcpcb.com/).  I used Altium Circuitmaker to create these, so it's hard to share a useful copy of them.  I plan at some point to migrate these to KiCad but that requires time to learn KiCad.  It'll probably happen when I start working on a better belt gizmo :)  
-
+  
 The folder also contains STLs to mount the boards and keep the solder joins clear of the mounting surface.  For the Wand, it is just a spacer - the board is designed to fit along the handle side of the Mk3 Q-Pack, using the external M3 bolt to secure it with a nut internally.  This should position the serial/power connections for the handle exit, but leave enough space for an encoder to run through the top knob if desired.  For the pack, it's a backer designed to have M3x5x4 heat sets (standard size used in Vorons) added to the holes so the board can be attached and removed easily with M3 bolts.  The backer can then be secured in place to the motherboard with VHB tape.  It should be slim enough to fit underneath the booster box of the Mk3 Q-Pack.
-
+  
 *TBD Supporting Images*
-
+  
 *Revision 1.0:* Initial release of boards  
-*Revision 1.1:* Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.
+*Revision 1.1:* Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.  
 
 ### Power
 I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V output or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my 12V talentcell battery and avoid noise issues going to the amp.  6W is overspecced (in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence).
 
 ## Useful Models
 I'm slowly going over my library of replacement parts and jigs that I've made over the course of this build and exporting them into the [STLs](./STLs/) folder.  Things like board mounts are generally reusable either with my PCBs or the off-the-shelf boards listed above.  Some bits I've made are very specific to my build so probably not of interest to others.  Have a play with Fusion 360 - you'll both love and hate yourself as a result :)  
+
 If you see any others I'm using in photos and want to get hold of them, let me know.  
 
 ## Thanks
