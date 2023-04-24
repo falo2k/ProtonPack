@@ -116,6 +116,8 @@ bool bluetoothMode = false;
 int trackNumber = defaultTrack;
 unsigned long stateLastChanged;
 
+bool wandConnected = false;
+
 // POWER CELL STATE
 int powerCellLitBar = 0;
 const int powerCellIdlePeriod = 1000;
@@ -159,6 +161,11 @@ const float powerDownCycloDecayRate = (float)255 / (0.8 * POWERDOWN_TIME);
 uint32_t cyclotronFull = Adafruit_NeoPixel::Color(255, 0, 0, 0);
 uint32_t cyclotronOverheat = Adafruit_NeoPixel::Color(255, 0, 0, 10);
 uint32_t ventColour = Adafruit_NeoPixel::Color(255, 255, 255, 255);
+
+// Time out and enter demo mode (music mode with bluetooth) if
+// it's been 5s since booting and no sign of the wand
+unsigned long bootTime;
+const unsigned long wandTimeoutTime = 5000;
 
 /*  ----------------------
     Setup and Loops
@@ -241,12 +248,39 @@ void setup() {
     pinMode(IO_1_PIN, OUTPUT); // Bluetooth control
     digitalWrite(IO_1_PIN, LOW);
 
+    bootTime = millis();
     DEBUG_SERIAL.println("setup() Complete");
 }
 
+// Tracker time to space out checks for wand connection
+unsigned long lastWandCheck = millis();
 
 void loop() {
     unsigned long currentMillis = millis();
+
+    if (!wandConnected) {
+        if (((currentMillis - lastWandCheck) > 250)) {
+            DEBUG_SERIAL.println("Pack waiting for Wand ...");
+            cmdMessenger.sendCmd(eventPackConnect);
+            lastWandCheck = currentMillis;
+        }
+        cmdMessenger.feedinSerialData();
+
+        // If we timeout turn on music mode and bluetooth
+        // Pretend the wand is connected
+        // Otherwise keep waiting
+        if ((currentMillis - bootTime) > wandTimeoutTime) {
+            DEBUG_SERIAL.println("Waiting for wand timed out.  Enabling demo mode.");
+            wandConnected = true;
+
+            initialiseState(MUSIC_MODE, currentMillis);
+            bluetoothMode = true;
+            toggleBluetoothModule(bluetoothMode);
+        }
+        else {
+            return;
+        }        
+    }
 
     // Process State Updates
     stateUpdate(currentMillis);
@@ -392,10 +426,16 @@ boolean setvolume(int8_t v) {
 
 void toggleBluetoothModule(bool state) {
     DEBUG_SERIAL.print("Switching Bluetooth Module: "); DEBUG_SERIAL.println(state);
+
     if (state) {
+        sdFXChannel.stop();
+        audioMixer.gain(mixerChannel2, 0.0);
+        audioMixer.gain(mixerAudioInChannel, 0.5);
         digitalWrite(IO_1_PIN, HIGH);
     }
     else {
+        audioMixer.gain(mixerChannel2, 0.5);
+        audioMixer.gain(mixerAudioInChannel, 0.0);
         digitalWrite(IO_1_PIN, LOW);
     }
 }
@@ -421,6 +461,7 @@ void attachCmdMessengerCallbacks() {
     cmdMessenger.attach(eventStopSDTrack, onStopSDTrack);
     cmdMessenger.attach(eventLoadConfig, onLoadConfig);
     cmdMessenger.attach(eventWriteConfig, onWriteConfig);
+    cmdMessenger.attach(eventWandConnect, onWandConnect);
 }
 
 void onUnknownCommand()
@@ -444,16 +485,6 @@ void onSetBluetoothMode() {
     bluetoothMode = arg;
 
     if (state == MUSIC_MODE) {
-        if (bluetoothMode) {
-            sdFXChannel.stop();
-            audioMixer.gain(mixerChannel2, 0.0);
-            audioMixer.gain(mixerAudioInChannel, 0.5);
-        }
-        else {
-            audioMixer.gain(mixerChannel2, 0.5);
-            audioMixer.gain(mixerAudioInChannel, 0.0);
-        }
-
         toggleBluetoothModule(bluetoothMode);
     }
 }
@@ -502,6 +533,13 @@ void onWriteConfig() {
     writeConfigFile(millis());
 }
 
+// Wand Connect - Send acknowledgment
+void onWandConnect() {
+    DEBUG_SERIAL.println("Wand Connected");
+    wandConnected = true;
+    cmdMessenger.sendCmd(eventPackConnect);
+}
+
 /*  ----------------------
     State Management
 ----------------------- */
@@ -512,8 +550,6 @@ void initialiseState(State newState, unsigned long currentMillis) {
     // and make sure bluetooth module is shut down
     if (state == MUSIC_MODE && newState != MUSIC_MODE) {
         sdFXChannel.stop();
-        audioMixer.gain(mixerChannel2, 0.5);
-        audioMixer.gain(mixerAudioInChannel, 0.0);
         toggleBluetoothModule(false);
     }
 
@@ -596,16 +632,6 @@ void initialiseState(State newState, unsigned long currentMillis) {
         ventLights.clear();
         sdBackgroundChannel.stop();
         sdFXChannel.stop();
-
-        if (bluetoothMode) {
-            sdFXChannel.stop();
-            audioMixer.gain(mixerChannel2, 0.0);
-            audioMixer.gain(mixerAudioInChannel, 0.5);
-        }
-        else {
-            audioMixer.gain(mixerChannel2, 0.5);
-            audioMixer.gain(mixerAudioInChannel, 0.0);
-        }
 
         toggleBluetoothModule(bluetoothMode);
         break;

@@ -101,6 +101,7 @@ State state = OFF;
 bool overheatMode = false;
 bool bluetoothMode = false;
 bool musicPlaying = false;
+bool packConnected = false;
 int trackNumber = defaultTrack;
 unsigned long stateLastChanged;
 
@@ -169,9 +170,6 @@ void setup() {
 	display.begin();
 	displayBoot(currentMillis);
 
-	// Delay 500ms to wait for pack to be up first
-	delay(500);
-
 	// Initialise the pack serial
 	cmdMessenger.printLfCr();
 	attachCmdMessengerCallbacks();
@@ -202,7 +200,6 @@ void setup() {
 	
 	// Initiate the input switches
 	setupInputs();
-	setStartupState(currentMillis);
 	
 	DEBUG_SERIAL.println("Setup Complete");
 	display.clear();
@@ -211,14 +208,34 @@ void setup() {
 	stateLastChanged = currentMillis;
 }
 
+// Tracker time to space out checks for pack connection
+unsigned long lastPackCheck = millis();
+
 void loop() {
-	if (firstLoop) {
-		// Tell the pack to load the configuration file on first loop
-		cmdMessenger.sendCmd(eventLoadConfig);
-		firstLoop = false;
+	unsigned long currentMillis = millis();
+	
+	// Pack handshake so a demo mode can be used for non-wand setup
+	if (!packConnected) {
+		if (((currentMillis - lastPackCheck) > 250)) {
+			if (!(displayState == WAITING)) {
+				displayState = WAITING;
+				drawDisplay(currentMillis);
+			}
+			DEBUG_SERIAL.println("Wand waiting for Pack ...");
+			cmdMessenger.sendCmd(eventWandConnect);
+			lastPackCheck = currentMillis;
+		}
+		cmdMessenger.feedinSerialData();
+		return;
 	}
 
-	unsigned long currentMillis = millis();
+	if (firstLoop) {
+		// Tell the pack to load the configuration file on first loop
+		DEBUG_SERIAL.println("First loop in Wand");
+		cmdMessenger.sendCmd(eventLoadConfig);
+		setStartupState(currentMillis);
+		firstLoop = false;
+	}
 
 	// Get any updates from pack
 	cmdMessenger.feedinSerialData();
@@ -288,10 +305,9 @@ void checkDisplayTimeout(unsigned long currentMillis) {
 }
 
 void displayBoot(unsigned long currentMillis) {
-	display.setFixedFont(ssd1306xled_font6x8);
-	display.clear();
+	displayState = BOOT_LOGO;
 
-	display.printFixed(8, 7, "Booting Pack ...", STYLE_BOLD);
+	display.drawBitmap1(0, 0, 128, 32, bootLogo);
 
 	lastDisplayUpdate = currentMillis;
 	displayState = BOOT_LOGO;
@@ -300,10 +316,14 @@ void displayBoot(unsigned long currentMillis) {
 void drawDisplay(unsigned long currentMillis) {
 	display.clear();
 
-	DEBUG_SERIAL.print("Drawing Display: "); DEBUG_SERIAL.println(displayState);
-	DEBUG_SERIAL.print("Selected Index: "); DEBUG_SERIAL.println(selectedIndex);
+	//DEBUG_SERIAL.print("Drawing Display: "); DEBUG_SERIAL.println(displayState);
+	//DEBUG_SERIAL.print("Selected Index: "); DEBUG_SERIAL.println(selectedIndex);
 
 	switch (displayState){
+		case WAITING:
+			display.drawBitmap1(0, 0, 128, 32, waitLogo);
+			break;
+
 		case TOP_MENU:
 			display.setFixedFont(ssd1306xled_font6x8);
 			display.printFixed(10, 0, "Volume", STYLE_BOLD);
@@ -1051,6 +1071,7 @@ void attachCmdMessengerCallbacks() {
 	cmdMessenger.attach(eventSetSDTrack, onPackSetTrack);
 
 	cmdMessenger.attach(eventUpdateMusicPlayingState, onUpdateMusicPlayingState);
+	cmdMessenger.attach(eventPackConnect, onPackConnect);
 }
 
 void onUnknownCommand()
@@ -1072,6 +1093,7 @@ void onPackIonSwitch() {
 }
 
 void onPackEncoderButton() {
+	DEBUG_SERIAL.println("Pack Encoder Pressed");
 	ButtonEvent event = (ButtonEvent)cmdMessenger.readInt16Arg();
 
 	switch (event) {
@@ -1093,26 +1115,36 @@ void onPackEncoderButton() {
 }
 
 void onPackEncoderTurn() {
+	DEBUG_SERIAL.println("Pack Encoder Turn");
 	int movement = cmdMessenger.readInt32Arg();
-
 	rotaryMove(millis(), movement);
 }
 
 void onPackSetTrack() {
+	DEBUG_SERIAL.println("Pack Set Track");
 	int newTrack = cmdMessenger.readInt16Arg();
 	DEBUG_SERIAL.printf("Pack Requested Track Change To: %s\n", trackList[newTrack][1]);
 	setSDTrack(millis(), newTrack);
 }
 
 void onPackSetVolume() {
+	DEBUG_SERIAL.println("Pack Set Volume");
 	int newVol = cmdMessenger.readInt16Arg();
 	DEBUG_SERIAL.printf("Pack Requested Volume Change To: %i\n", newVol);
 	setVolume(millis(), newVol);
 }
 
 void onUpdateMusicPlayingState() {
+	DEBUG_SERIAL.println("Pack Music State Update");
 	bool playingState = cmdMessenger.readBoolArg();
 	musicPlaying = playingState;
+}
+
+void onPackConnect() {
+	DEBUG_SERIAL.println("Pack Connection to Wand");
+	packConnected = true;
+	displayState = DISPLAY_OFF;
+	drawDisplay(millis());
 }
 
 
