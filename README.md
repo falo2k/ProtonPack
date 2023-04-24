@@ -94,9 +94,9 @@ Where I can remember it, I've listed the Equipment used and links to purchase be
 
 **Buttons and Switches**  
 3 x [2 Position MTS102 mini toggle switches](https://www.amazon.co.uk/gp/product/B01BWL7Z44/) for wand  
-1 x [Black Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B00TXNXU4S)
-1 x [Red Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B008ZYE9LY)
-2 x [EC11 Rotary Encoder with Switch](https://www.ebay.co.uk/sch/i.html?_from=R40&_trksid=p2380057.m570.l1313&_nkw=ec11+rotary+encoder&_sacat=0) for the pack (crank) and wand (top / front knob).
+1 x [Black Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B00TXNXU4S)  
+1 x [Red Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B008ZYE9LY)  
+2 x [EC11 Rotary Encoder with Switch](https://www.ebay.co.uk/sch/i.html?_from=R40&_trksid=p2380057.m570.l1313&_nkw=ec11+rotary+encoder&_sacat=0) for the pack (crank) and wand (top / front knob).  
   
 Ion switches can be picked up on Etsy.  
   
@@ -106,13 +106,13 @@ I also use some of [these](https://www.digikey.co.uk/en/products/detail/e-switch
 You may want to do your own LEDs.  Numbers and type can be varied in the code, though I haven't allowed for cyclotron LEDs that are more than a single addressable LED in a chain.  You may want to use the 7 LED jewels, though I found they were unnecessary for brightness and just ramped up power consumption for the sake of it.  
 1 x [144LEDs/m SK6812 RGBW Strip](https://www.aliexpress.com/item/32476317187.html?spm=a2g0o.order_list.order_list_main.5.74871802yO2AMH).  144 LEDs/m is just enough density to give you 15 LEDs in the Power Cell.  You can get a minimum length if you like.  
 13+ x [SK6812 RGBW Chips](https://www.aliexpress.com/item/1005002509850925.html?spm=a2g0o.order_list.order_list_main.29.74871802yO2AMH) which I use in the wand, pack vent, and for the cyclotron.  Worth getting some spares in case you fry one.  
-1 x [RGBW LED jewel](https://www.aliexpress.com/item/32825068416.html?spm=a2g0o.order_list.order_list_main.56.74871802yO2AMH) for the barrel light
-1 x [28 Segment Bar Graph](http://www.barmeter.com/download/bl28-3005sda04y.pdf).  Sourcing for this always ends up out of date, so hunt around Aliexpress or try asking on one of the FB groups.  Note that there are two versions of this bargraph, a common anode and common cathode version.  My code is designed for the BL28-3005SDK04Y model (note the A or K in the model name differentiating them).  It can be adapted for the other by simply changing the array mapping in the common header to point to the correct row/column references for your model.
+1 x [RGBW LED jewel](https://www.aliexpress.com/item/32825068416.html?spm=a2g0o.order_list.order_list_main.56.74871802yO2AMH) for the barrel light  
+1 x [28 Segment Bar Graph](http://www.barmeter.com/download/bl28-3005sda04y.pdf).  Sourcing for this always ends up out of date, so hunt around Aliexpress or try asking on one of the FB groups.  Note that there are two versions of this bargraph, a common anode and common cathode version.  My code is designed for the BL28-3005SDK04Y model (note the A or K in the model name differentiating them).  It can be adapted for the other by simply changing the array mapping in the common header to point to the correct row/column references for your model.  
 
 **Capacitors and Resistors**  
-4 x 4.7K Ohm Resistors for pullups on the Teensy i2c lines
-6 x 220 Ohm Resistors for neopixel data inputs
-2 x 100 uF Capacitors for neopixel power inputs (these may not be necessary depending on the pixels you're using - I'm keeping them in as they don't harm)
+4 x 4.7K Ohm Resistors for pullups on the Teensy i2c lines  
+6 x 220 Ohm Resistors for neopixel data inputs  
+2 x 100 uF Capacitors for neopixel power inputs (these may not be necessary depending on the pixels you're using - I'm keeping them in as they don't harm)  
 
 **Connectors (for PCB / wiring)**  
 Source these where you like depending on how many you need / want for other projects.  I tend to buy bulk lots from AliExpress.  You can count up the exact number you need, but I always find I need more so I'll leave them open ended :)  
