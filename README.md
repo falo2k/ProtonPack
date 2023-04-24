@@ -70,6 +70,7 @@ Currently there are three features for control:
 - I'd like to add more granular volume control, again through the menu, to individually tweak the volume of SFX, Music, and Bluetooth channels.
 - The Ion Switch input currently doesn't do anything.  I may use this as either a hard or soft toggle for any future smoke effects.
 - Check compatibility with Mk4 Q-Pack and generally review the PCBs for other options.  Now I've got my own wiring in, I might see some better positioning for connectors, consider breakout boards, etc.
+- Consider either including an isolated converted in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.
 
 ## Hardware
 ### BOM
@@ -123,7 +124,7 @@ The folder also contains STLs to mount the boards and keep the solder joins clea
 *Revision 1.1:* Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.
 
 ### Power
-I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.
+I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my talentcell battery and avoid noise issues going to the amp.  6W is overspecced (in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence).
 
 ## Thanks
 A huge thanks to everyone over on the [Arduino for Ghostbusters Props](https://www.facebook.com/groups/1187612118706042/) Facebook group.  Special shout outs to:  
