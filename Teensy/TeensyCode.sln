@@ -1,0 +1,100 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pack", "Pack\Pack.vcxproj", "{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProtonPackCommon", "ProtonPackCommon\ProtonPackCommon.vcxitems", "{0F693F7C-92F5-4C34-9D90-E7F69F2773A1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Wand", "Wand\Wand.vcxproj", "{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lcdgfx-1.1.4-1.1.4", "D:\UserProfile\Documents\Arduino\libraries\lcdgfx-1.1.4\lcdgfx-1.1.4-1.1.4.vcxitems", "{A1BE0C3A-85BF-4C42-818E-D2A12DE620D7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TimerEvent-0.5.0", "D:\UserProfile\Documents\Arduino\libraries\TimerEvent\TimerEvent-0.5.0.vcxitems", "{D5F71EDE-91FF-4AC7-B4D8-6E81C6A130B7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Encoder-1.4.2", "C:\Users\oliwr\AppData\Local\arduino15\packages\teensy\hardware\avr\1.57.2\libraries\Encoder\Encoder-1.4.2.vcxitems", "{09A6EC2A-F758-43E8-941C-E6162CA7DADC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CmdMessenger-4.0.0", "D:\UserProfile\Documents\Arduino\libraries\CmdMessenger\CmdMessenger-4.0.0.vcxitems", "{BA13A825-15FB-4F56-9A75-77281393F617}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|ARM64 = Debug|ARM64
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|ARM = Release|ARM
+		Release|ARM64 = Release|ARM64
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|ARM.ActiveCfg = Debug|ARM
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|ARM.Build.0 = Debug|ARM
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|ARM.Deploy.0 = Debug|ARM
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|ARM64.Build.0 = Debug|ARM64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|x64.ActiveCfg = Debug|x64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|x64.Build.0 = Debug|x64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|x64.Deploy.0 = Debug|x64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|x86.ActiveCfg = Debug|x86
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|x86.Build.0 = Debug|x86
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Debug|x86.Deploy.0 = Debug|x86
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|ARM.ActiveCfg = Release|ARM
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|ARM.Build.0 = Release|ARM
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|ARM.Deploy.0 = Release|ARM
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|ARM64.ActiveCfg = Release|ARM64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|ARM64.Build.0 = Release|ARM64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|ARM64.Deploy.0 = Release|ARM64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|x64.ActiveCfg = Release|x64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|x64.Build.0 = Release|x64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|x64.Deploy.0 = Release|x64
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|x86.ActiveCfg = Release|x86
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|x86.Build.0 = Release|x86
+		{741ACEC6-D24B-4A7F-A856-98D3CFDB0757}.Release|x86.Deploy.0 = Release|x86
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|ARM.ActiveCfg = Debug|ARM
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|ARM.Build.0 = Debug|ARM
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|ARM.Deploy.0 = Debug|ARM
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|ARM64.Build.0 = Debug|ARM64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|x64.ActiveCfg = Debug|x64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|x64.Build.0 = Debug|x64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|x64.Deploy.0 = Debug|x64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|x86.ActiveCfg = Debug|x86
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|x86.Build.0 = Debug|x86
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Debug|x86.Deploy.0 = Debug|x86
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|ARM.ActiveCfg = Release|ARM
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|ARM.Build.0 = Release|ARM
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|ARM.Deploy.0 = Release|ARM
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|ARM64.ActiveCfg = Release|ARM64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|ARM64.Build.0 = Release|ARM64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|ARM64.Deploy.0 = Release|ARM64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|x64.ActiveCfg = Release|x64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|x64.Build.0 = Release|x64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|x64.Deploy.0 = Release|x64
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|x86.ActiveCfg = Release|x86
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|x86.Build.0 = Release|x86
+		{68F45E4F-0A79-4909-AF7D-ACF11B8EF3E1}.Release|x86.Deploy.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {658F381B-BB8B-44CA-813D-A6F3171E7786}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		C:\Users\oliwr\AppData\Local\arduino15\packages\teensy\hardware\avr\1.57.2\libraries\Encoder\Encoder-1.4.2.vcxitems*{09a6ec2a-f758-43e8-941c-e6162ca7dadc}*SharedItemsImports = 9
+		ProtonPackCommon\ProtonPackCommon.vcxitems*{0f693f7c-92f5-4c34-9d90-e7f69f2773a1}*SharedItemsImports = 9
+		C:\Users\oliwr\AppData\Local\arduino15\packages\teensy\hardware\avr\1.57.2\libraries\Encoder\Encoder-1.4.2.vcxitems*{68f45e4f-0a79-4909-af7d-acf11b8ef3e1}*SharedItemsImports = 4
+		D:\UserProfile\Documents\Arduino\libraries\lcdgfx-1.1.4\lcdgfx-1.1.4-1.1.4.vcxitems*{68f45e4f-0a79-4909-af7d-acf11b8ef3e1}*SharedItemsImports = 4
+		D:\UserProfile\Documents\Arduino\libraries\TimerEvent\TimerEvent-0.5.0.vcxitems*{68f45e4f-0a79-4909-af7d-acf11b8ef3e1}*SharedItemsImports = 4
+		ProtonPackCommon\ProtonPackCommon.vcxitems*{68f45e4f-0a79-4909-af7d-acf11b8ef3e1}*SharedItemsImports = 4
+		D:\UserProfile\Documents\Arduino\libraries\CmdMessenger\CmdMessenger-4.0.0.vcxitems*{741acec6-d24b-4a7f-a856-98d3cfdb0757}*SharedItemsImports = 4
+		ProtonPackCommon\ProtonPackCommon.vcxitems*{741acec6-d24b-4a7f-a856-98d3cfdb0757}*SharedItemsImports = 4
+		D:\UserProfile\Documents\Arduino\libraries\lcdgfx-1.1.4\lcdgfx-1.1.4-1.1.4.vcxitems*{a1be0c3a-85bf-4c42-818e-d2a12de620d7}*SharedItemsImports = 9
+		D:\UserProfile\Documents\Arduino\libraries\CmdMessenger\CmdMessenger-4.0.0.vcxitems*{ba13a825-15fb-4f56-9a75-77281393f617}*SharedItemsImports = 9
+		D:\UserProfile\Documents\Arduino\libraries\TimerEvent\TimerEvent-0.5.0.vcxitems*{d5f71ede-91ff-4ac7-b4d8-6e81c6a130b7}*SharedItemsImports = 9
+	EndGlobalSection
+EndGlobal

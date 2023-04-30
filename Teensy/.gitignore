@@ -1,0 +1,11 @@
+*.*
+!.gitignore
+!*.ino
+!*.cpp
+!*.h
+__vm
+!*.vcxproj
+!*.vcxitems
+!library.properties
+!*.sln
+~AutoRecover.*.*
