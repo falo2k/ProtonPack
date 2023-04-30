@@ -70,11 +70,11 @@ Currently there are three features for control:
 - I'd like to add more granular volume control, again through the menu, to individually tweak the volume of SFX, Music, and Bluetooth channels.
 - The Ion Switch input currently doesn't do anything.  I may use this as either a hard or soft toggle for any future smoke effects.
 - Check compatibility with Mk4 Q-Pack and generally review the PCBs for other options.  Now I've got my own wiring in, I might see some better positioning for connectors, consider breakout boards, etc.
-- Consider either including an isolated converted in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.
+- Consider either including an isolated converter in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.
 
 ## Hardware
 ### BOM
-Where I can remember it, I've listed the Equipment used and links to purchase below.  You may find other sources are better for availability (Mouser, Digikey, etc.).  As with all of these types of projects, it depends exactly how you're planning to mount your electronics, so I'd advise thinking about your layout before purchasing.  
+Where I can remember it, I've listed the Equipment used and links to purchase below.  You may find other sources are better for availability (Mouser, Digikey, etc.).  As with all of these types of projects, it depends exactly how you're planning to mount your electronics, so I'd advise thinking about your layout before purchasing.  I'm assuming I don't need to go into tools and wire here, that should be a given.  A decent soldering iron is a must, and I have to say how much I'm loving my [Pinecil](https://www.pine64.org/pinecil/), and also the best helping hands I've ever used, the [Omnifixo](https://omnifixo.com/en-gb).  
 
 **Controllers**  
  1 x [Teensy LC](https://www.pjrc.com/store/teensylc.html).  Would be fine using a Teensy 4.0 here as well if availability is a challenge  
@@ -82,9 +82,9 @@ Where I can remember it, I've listed the Equipment used and links to purchase be
  1 x [Teensy Audio Board Rev D](https://www.pjrc.com/store/teensy3_audio.html)  
  1 x [Teensy Stacking Header Kit](https://www.adafruit.com/product/3883).  For the audio board to stack on the Teensy 4.0.  This was the easiest source of 14 pin stackable headers I could find.  If not using PCBs then you may just stick with non-stacking headers here.  
  4 x [14x1R Pins](https://www.pjrc.com/store/header_14x1.html) for the Teensy boards  
- 4 x [14x1R Headers](https://www.pjrc.com/store/socket_14x1.html) for the PCBs  
- 1 x 5x2R Header for the PCB connection to the audio inputs/outputs on the board  
- 1 x Micro SD Card for the Audio Adapter.  See the Audio Adapter product page for up to date recommendations.  Not much is stored on here so you can get away with a fairly small card, but if you want to load more songs on YMMV.  
+ 4 x [14x1R Socket Headers](https://www.pjrc.com/store/socket_14x1.html) for the PCBs  
+ 1 x [5x2R Socket Header](https://www.amazon.co.uk/Double-Female-Straight-Header-Socket-Black/dp/B00R1LKZOM/ref=sr_1_5?crid=2BQW1XCGHFEJU&keywords=2r+5+header&qid=1682349085&sprefix=2r+5+he%2Caps%2C120&sr=8-5) for the PCB connection to the audio inputs/outputs on the board  
+ 1 x Micro SD Card for the Audio Adapter.  See the [Audio Adapter product page](https://www.pjrc.com/store/teensy3_audio.html#:~:text=video%20for%20details.-,Recommended%20SD%20Card,-Most%20SD%20cards) for up to date recommendations.  Not much is stored on here so you can get away with a fairly small card, but if you want to load more songs on YMMV.  
 
 **Premade Boards**  
 1 x [Adafruit 16x8 LED Matrix Driver Backpack - HT16K33 Breakout](https://www.adafruit.com/product/1427) for driving the bargraph.  
