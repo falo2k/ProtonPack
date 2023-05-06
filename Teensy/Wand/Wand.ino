@@ -318,6 +318,12 @@ void displayBoot(unsigned long currentMillis) {
 	displayState = BOOT_LOGO;
 }
 
+int rightJustifyString(int endPixel, int fontWidth, const char* textString) {
+	return endPixel - (fontWidth * strlen(textString)) + 1;
+}
+
+const int indicatorSpacing = 2;
+
 void drawDisplay(unsigned long currentMillis) {
 	display.clear();
 
@@ -329,14 +335,16 @@ void drawDisplay(unsigned long currentMillis) {
 			display.drawBitmap1(0, 0, 128, 32, waitLogo);
 			break;
 
-		case TOP_MENU:
+		case TOP_MENU: {
+			int chevronIndicatorPixel = rightJustifyString(127, 6, "<");
 			display.setFixedFont(ssd1306xled_font6x8);
-			display.printFixed(10, 0, "Volume", STYLE_BOLD);
-			display.printFixed(10, 8, "Track Select", STYLE_BOLD);
-			display.printFixed(10, 16, "Load Config", STYLE_BOLD);
-			display.printFixed(10, 24, "Save Config", STYLE_BOLD);
-			display.printFixed(1, selectedIndex * 8, ">", STYLE_BOLD);
-			break;
+			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, "Volume"), 0, "Volume", STYLE_BOLD);
+			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, "Track Select"), 8, "Track Select", STYLE_BOLD);
+			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, "Load Config"), 16, "Load Config", STYLE_BOLD);
+			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, "Save Config"), 24, "Save Config", STYLE_BOLD);
+			display.printFixed(chevronIndicatorPixel, selectedIndex * 8, "<", STYLE_BOLD);
+		}
+		break;
 
 		case VOLUME_CHANGE:
 		case VOLUME_DISPLAY: {
@@ -354,13 +362,29 @@ void drawDisplay(unsigned long currentMillis) {
 			}
 			break;
 
-		case TRACK_SELECT:
+		case TRACK_SELECT: {
+			int chevronIndicatorPixel = rightJustifyString(127, 6, "<");
 			display.setFixedFont(ssd1306xled_font6x8);
-			display.printFixed(6, 2, trackList[looparound(selectedIndex-1,trackCount)][1], STYLE_NORMAL);
-			display.printFixed(0, 12, ">", STYLE_BOLD);
-			display.printFixed(6, 12, trackList[selectedIndex][1], STYLE_BOLD);
-			display.printFixed(6, 22, trackList[looparound(selectedIndex + 1, trackCount)][1], STYLE_NORMAL);			
-			break;
+			display.printFixed(
+				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, trackList[looparound(selectedIndex - 1, trackCount)][1]),
+				2, 
+				trackList[looparound(selectedIndex - 1, trackCount)][1],
+				STYLE_NORMAL);
+			display.printFixed(chevronIndicatorPixel, 12, "<", STYLE_BOLD);
+			display.invertColors();
+			display.printFixed(
+				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, trackList[selectedIndex][1]),
+				12,
+				trackList[selectedIndex][1],
+				STYLE_BOLD);
+			display.invertColors();
+			display.printFixed(
+				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, trackList[looparound(selectedIndex + 1, trackCount)][1]),
+				22,
+				trackList[looparound(selectedIndex + 1, trackCount)][1],
+				STYLE_NORMAL);
+		}
+		break;
 
 		case TRACK_DISPLAY:
 			display.setFixedFont(ssd1306xled_font6x8);
@@ -1138,16 +1162,23 @@ void onPackSetTrack() {
 	setSDTrack(millis(), newTrack);
 }
 
+bool firstVolumeSet = true;
+
 void onPackSetVolume() {
 	unsigned long currentMillis = millis();
 	
 	DEBUG_SERIAL.println("Pack Set Volume");
 	int newVol = cmdMessenger.readInt16Arg();
 	DEBUG_SERIAL.printf("Pack Requested Volume Change To: %i\n", newVol);
-	displayState = VOLUME_DISPLAY;
-	selectedIndex = newVol;
-	lastDisplayUpdate = currentMillis;
-	drawDisplay(currentMillis);
+	if (firstVolumeSet) {
+		firstVolumeSet = false;
+	}
+	else {
+		displayState = VOLUME_DISPLAY;
+		selectedIndex = newVol;
+		lastDisplayUpdate = currentMillis;
+		drawDisplay(currentMillis);
+	}	
 	setVolume(currentMillis, newVol);
 }
 
