@@ -84,7 +84,7 @@ Switch encoderButton = Switch(ROT_BTN_PIN);
 	Timers
 ----------------------- */
 TimerEvent bodyTimer;
-int bodyPeriod = 50;
+int bodyPeriod = 25;
 TimerEvent tipTimer;
 int tipPeriod = 50;
 TimerEvent barrelTimer;
@@ -127,12 +127,15 @@ const uint32_t firingLEDColours[numFiringLEDColours] = {
 	Adafruit_NeoPixel::Color(0,0,0,50)
 };
 
-const int firingBlinkMS = 750;
+const int firingBlinkMS = 500;
+const int warningBlinkMS = 150;
+const int ventFlickerPercentage = 15;
 
 const uint32_t ventColour = Adafruit_NeoPixel::Color(250, 250, 250, 250);
+const uint32_t ventFlickerColour = Adafruit_NeoPixel::Color(0, 0, 250, 100);
 const uint32_t tipColour = Adafruit_NeoPixel::Color(0, 0, 0, 100);
 const uint32_t frontColour = Adafruit_NeoPixel::Color(200, 200, 200, 200);
-const uint32_t topForwardBatteryColour = Adafruit_NeoPixel::Color(0, 0, 100, 0);
+const uint32_t topForwardBatteryColour = Adafruit_NeoPixel::Color(0, 0, 50, 0);
 const uint32_t topForwardColour = Adafruit_NeoPixel::Color(200, 200, 200, 0);
 const uint32_t topBackColour = Adafruit_NeoPixel::Color(0, 0, 0, 100);
 const uint32_t sloBloColour = Adafruit_NeoPixel::Color(255, 0, 0, 0);
@@ -940,7 +943,11 @@ void initialiseState(State newState, unsigned long currentMillis) {
 
 		case FIRING_STOP:
 			bodyLights.setPixelColor(TOP_FORWARD_INDEX, topForwardColour);
+			bodyLights.setPixelColor(FRONT_INDEX, ledOff);
+			bodyLights.setPixelColor(TOP_BACK_INDEX, ledOff);
 			lastBodyChange[TOP_FORWARD_INDEX] = currentMillis;
+			lastBodyChange[FRONT_INDEX] = currentMillis;
+			lastBodyChange[TOP_BACK_INDEX] = currentMillis;
 			barrelLights.clear();
 			// Bargraph should continue from previous
 			bargraphPeriod = bargraphFiringStopPeriod;
@@ -1204,7 +1211,17 @@ void bodyUpdate() {
 		}
 		break;
 
-	case FIRING_WARN:
+	case FIRING_WARN: {
+		unsigned long timeSinceFiringStart = max(currentMillis, stateLastChanged) - stateLastChanged;
+		bool warnLEDLit = (timeSinceFiringStart % (2 * warningBlinkMS)) < warningBlinkMS;
+		bodyLights.setPixelColor(TOP_BACK_INDEX, warnLEDLit ? topBackColour : ledOff);
+		savedBodyColours[TOP_BACK_INDEX] = warnLEDLit ? topBackColour : ledOff;
+		uint32_t thisColour = random(0, 100) < ventFlickerPercentage ? ventFlickerColour : ventColour;
+		savedBodyColours[VENT_INDEX] = thisColour;
+		bodyLights.setPixelColor(VENT_INDEX, thisColour);
+		lastBodyChange[TOP_BACK_INDEX] = currentMillis;
+		lastBodyChange[VENT_INDEX] = currentMillis;
+	}
 	case FIRING: {
 		unsigned long timeSinceFiringStart = max(currentMillis, stateLastChanged) - stateLastChanged;
 		bool topLEDLit = (timeSinceFiringStart % (2 * firingBlinkMS)) < firingBlinkMS;
@@ -1217,7 +1234,11 @@ void bodyUpdate() {
 		break;
 
 	case VENTING:
-
+		uint32_t thisColour = random(0, 100) < 2 * ventFlickerPercentage ? ventFlickerColour : ventColour;
+		savedBodyColours[VENT_INDEX] = thisColour;
+		lastBodyChange[VENT_INDEX] = currentMillis;
+		bodyLights.setPixelColor(VENT_INDEX, thisColour);
+		bodyLights.show();
 		break;
 
 	case FIRING_STOP:
