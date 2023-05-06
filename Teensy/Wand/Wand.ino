@@ -129,11 +129,12 @@ const uint32_t firingLEDColours[numFiringLEDColours] = {
 
 const int firingBlinkMS = 750;
 
-const uint32_t ventColour = Adafruit_NeoPixel::Color(200, 200, 200, 200);
-const uint32_t tipColour = Adafruit_NeoPixel::Color(200, 40, 0, 0);
-const uint32_t frontColour = Adafruit_NeoPixel::Color(150, 150, 150, 0);
-const uint32_t topForwardColour = Adafruit_NeoPixel::Color(150, 150, 150, 0);
-const uint32_t topBackColour = Adafruit_NeoPixel::Color(200, 40, 0, 0);
+const uint32_t ventColour = Adafruit_NeoPixel::Color(250, 250, 250, 250);
+const uint32_t tipColour = Adafruit_NeoPixel::Color(0, 0, 0, 100);
+const uint32_t frontColour = Adafruit_NeoPixel::Color(200, 200, 200, 200);
+const uint32_t topForwardBatteryColour = Adafruit_NeoPixel::Color(0, 0, 100, 0);
+const uint32_t topForwardColour = Adafruit_NeoPixel::Color(200, 200, 200, 0);
+const uint32_t topBackColour = Adafruit_NeoPixel::Color(0, 0, 0, 100);
 const uint32_t sloBloColour = Adafruit_NeoPixel::Color(255, 0, 0, 0);
 
 const int bargraphLEDs = 28;
@@ -860,6 +861,8 @@ void initialiseState(State newState, unsigned long currentMillis) {
 			barrelLights.clear();			
 			clearBargraph(currentMillis);
 			bargraph.write();
+			bodyLights.setPixelColor(TOP_FORWARD_INDEX, topForwardBatteryColour);
+			bodyLights.show();
 			break;
 
 		case BOOTING:			
@@ -1128,10 +1131,16 @@ void onPackSetTrack() {
 }
 
 void onPackSetVolume() {
+	unsigned long currentMillis = millis();
+	
 	DEBUG_SERIAL.println("Pack Set Volume");
 	int newVol = cmdMessenger.readInt16Arg();
 	DEBUG_SERIAL.printf("Pack Requested Volume Change To: %i\n", newVol);
-	setVolume(millis(), newVol);
+	displayState = VOLUME_DISPLAY;
+	selectedIndex = newVol;
+	lastDisplayUpdate = currentMillis;
+	drawDisplay(currentMillis);
+	setVolume(currentMillis, newVol);
 }
 
 void onUpdateMusicPlayingState() {
