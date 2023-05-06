@@ -310,11 +310,15 @@ void readConfigFile(unsigned long currentMillis) {
         minIni ini(configFile);
         theVol = ini.geti("", configVolume, defaultVol);
         trackNumber = ini.geti("", configTrack, defaultTrack);
+        OVERHEAT_TIME = ini.geti("", configOverheat, OVERHEAT_DEFAULT_TIME);
+        FIRING_WARN_TIME = ini.geti("", configWarn, FIRING_WARN_DEFAULT_TIME);
     }
     else {
         DEBUG_SERIAL.println("No Config File Found.  Using Default values.");
         trackNumber = defaultTrack;
         theVol = defaultVol;
+        OVERHEAT_TIME = OVERHEAT_DEFAULT_TIME;
+        FIRING_WARN_TIME = FIRING_WARN_DEFAULT_TIME;
     }
 }
 
@@ -325,6 +329,8 @@ void writeConfigFile(unsigned long currentMillis) {
 
     ini.put("", configVolume, theVol);
     ini.put("", configTrack, trackNumber);
+    ini.put("", configOverheat, OVERHEAT_TIME);
+    ini.put("", configWarn, FIRING_WARN_TIME);
 }
 
 /*  ----------------------
@@ -398,6 +404,7 @@ void rotaryMove(unsigned long currentMillis, int movement) {
     if (encoderHeld) {
         setvolume(theVol + movement);
         cmdMessenger.sendCmd(eventSetVolume, theVol);
+        cmdMessenger.sendCmd(eventDisplayVolume, theVol);
     }
     //cmdMessenger.sendCmd(eventPackEncoderTurn, movement);
 }
@@ -475,6 +482,7 @@ void attachCmdMessengerCallbacks() {
     cmdMessenger.attach(eventLoadConfig, onLoadConfig);
     cmdMessenger.attach(eventWriteConfig, onWriteConfig);
     cmdMessenger.attach(eventWandConnect, onWandConnect);
+    cmdMessenger.attach(eventSendConfigToPack, onSendConfigToPack);
 }
 
 void onUnknownCommand()
@@ -540,10 +548,20 @@ void onLoadConfig() {
     readConfigFile(millis());
     cmdMessenger.sendCmd(eventSetVolume, theVol);
     cmdMessenger.sendCmd(eventSetSDTrack, trackNumber);
+    cmdMessenger.sendCmdStart(eventSendConfigToWand);
+    cmdMessenger.sendCmdArg(OVERHEAT_TIME);
+    cmdMessenger.sendCmdArg(FIRING_WARN_TIME);
+    cmdMessenger.sendCmdEnd();
 }
 
 void onWriteConfig() {
     writeConfigFile(millis());
+}
+
+void onSendConfigToPack() {
+    DEBUG_SERIAL.println("Received configuration from wand");
+    OVERHEAT_TIME = cmdMessenger.readInt16Arg();
+    FIRING_WARN_TIME = cmdMessenger.readInt16Arg();
 }
 
 // Wand Connect - Send acknowledgment

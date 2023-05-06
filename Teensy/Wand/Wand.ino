@@ -158,6 +158,8 @@ const float bargraphFiringAcceleration = 0.5;
 
 bool firstLoop = true;
 
+void updatePackSettings(unsigned long currentMillis);
+
 /*  ----------------------
 	Setup and Loops
 ----------------------- */
@@ -338,11 +340,23 @@ void drawDisplay(unsigned long currentMillis) {
 		case TOP_MENU: {
 			int chevronIndicatorPixel = rightJustifyString(127, 6, "<");
 			display.setFixedFont(ssd1306xled_font6x8);
-			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, "Volume"), 0, "Volume", STYLE_BOLD);
-			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, "Track Select"), 8, "Track Select", STYLE_BOLD);
-			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, "Load Config"), 16, "Load Config", STYLE_BOLD);
-			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, "Save Config"), 24, "Save Config", STYLE_BOLD);
-			display.printFixed(chevronIndicatorPixel, selectedIndex * 8, "<", STYLE_BOLD);
+			
+			display.printFixed(chevronIndicatorPixel, 8, "<", STYLE_BOLD);
+			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, 
+				topDisplayItems[looparound(selectedIndex - 1, topDisplayItemCount)]),
+				0, topDisplayItems[looparound(selectedIndex - 1, topDisplayItemCount)], STYLE_NORMAL);
+			display.invertColors();
+			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, 
+				topDisplayItems[looparound(selectedIndex, topDisplayItemCount)]),
+				8, topDisplayItems[looparound(selectedIndex, topDisplayItemCount)], STYLE_NORMAL);
+			display.invertColors();
+			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, 
+				topDisplayItems[looparound(selectedIndex + 1, topDisplayItemCount)]),
+				16, topDisplayItems[looparound(selectedIndex + 1, topDisplayItemCount)], STYLE_NORMAL);
+			display.printFixed(rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, 
+				topDisplayItems[looparound(selectedIndex + 2, topDisplayItemCount)]),
+				24, topDisplayItems[looparound(selectedIndex + 2, topDisplayItemCount)], STYLE_NORMAL);
+			
 		}
 		break;
 
@@ -366,22 +380,31 @@ void drawDisplay(unsigned long currentMillis) {
 			int chevronIndicatorPixel = rightJustifyString(127, 6, "<");
 			display.setFixedFont(ssd1306xled_font6x8);
 			display.printFixed(
-				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, trackList[looparound(selectedIndex - 1, trackCount)][1]),
-				2, 
+				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, 
+					trackList[looparound(selectedIndex - 1, trackCount)][1]),
+				0, 
 				trackList[looparound(selectedIndex - 1, trackCount)][1],
 				STYLE_NORMAL);
-			display.printFixed(chevronIndicatorPixel, 12, "<", STYLE_BOLD);
+			display.printFixed(chevronIndicatorPixel, 8, "<", STYLE_BOLD);
 			display.invertColors();
 			display.printFixed(
-				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, trackList[selectedIndex][1]),
-				12,
+				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, trackList
+					[selectedIndex][1]),
+				8,
 				trackList[selectedIndex][1],
 				STYLE_BOLD);
 			display.invertColors();
 			display.printFixed(
-				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, trackList[looparound(selectedIndex + 1, trackCount)][1]),
-				22,
+				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, 
+					trackList[looparound(selectedIndex + 1, trackCount)][1]),
+				16,
 				trackList[looparound(selectedIndex + 1, trackCount)][1],
+				STYLE_NORMAL);
+			display.printFixed(
+				rightJustifyString(chevronIndicatorPixel - indicatorSpacing, 6, 
+					trackList[looparound(selectedIndex + 2, trackCount)][1]),
+				24,
+				trackList[looparound(selectedIndex + 2, trackCount)][1],
 				STYLE_NORMAL);
 		}
 		break;
@@ -436,6 +459,42 @@ void drawDisplay(unsigned long currentMillis) {
 
 		case DISPLAY_OFF:
 			break;
+
+		case OVERHEAT_TIME_SET: {
+			display.setFixedFont(ssd1306xled_font8x16);
+			// XPos for header starts at 64 - (8*13/2)
+			int valPos = 22 - 16 + floor(84 * (selectedIndex - OVERHEAT_MIN_TIME) / (OVERHEAT_MAX_TIME - OVERHEAT_MIN_TIME));
+			char valStr[4];
+			float secondsVal = (float)selectedIndex * 0.001;
+			dtostrf(secondsVal, 4, 1, valStr);
+			DEBUG_SERIAL.println(valStr);
+			DEBUG_SERIAL.println(secondsVal);
+			display.printFixed(12, 0, "OVERHEAT TIME", STYLE_NORMAL);
+			display.printFixed(valPos, 16, valStr, STYLE_NORMAL);
+			display.drawVLine(4, 17, 31);
+			display.drawVLine(124, 17, 31);
+			display.drawHLine(5, 24, valPos - 2 );
+			display.drawHLine(valPos + 32 + 2, 24, 123);
+		}
+		break;
+
+		case WARNING_TIME_SET: {
+			display.setFixedFont(ssd1306xled_font8x16);
+			// XPos for header starts at 64 - (8*12/2)
+			int valPos = 22 - 16 + floor(84 * (selectedIndex - FIRING_WARN_MIN_TIME) / (FIRING_WARN_MAX_TIME - FIRING_WARN_MIN_TIME));
+			char valStr[4];
+			float secondsVal = (float)selectedIndex * 0.001;
+			dtostrf(secondsVal, 4, 1, valStr);
+			DEBUG_SERIAL.println(valStr);
+			DEBUG_SERIAL.println(secondsVal);
+			display.printFixed(16, 0, "WARNING TIME", STYLE_NORMAL);
+			display.printFixed(valPos, 16, valStr, STYLE_NORMAL);
+			display.drawVLine(4, 17, 31);
+			display.drawVLine(124, 17, 31);
+			display.drawHLine(5, 24, valPos - 2);
+			display.drawHLine(valPos + 32 + 2, 24, 123);
+		}
+		break;
 
 		default:
 			display.clear();
@@ -709,23 +768,13 @@ void rotaryButtonLongPress(void* ref) {
 		break;
 
 	case VOLUME_CHANGE:
-		displayState = TOP_MENU;
-		selectedIndex = 0;
-		break;
-
-	case TRACK_SELECT:
-		displayState = TOP_MENU;
-		selectedIndex = 1;
-		break;
-	
+	case TRACK_SELECT:	
 	case LOAD_CONFIG:
-		displayState = TOP_MENU;
-		selectedIndex = 2;
-		break;
-
 	case SAVE_CONFIG:
-		displayState = TOP_MENU;
-		selectedIndex = 3;
+	case OVERHEAT_TIME_SET:
+	case WARNING_TIME_SET:
+		selectedIndex = getTopLevelIndex(displayState);
+		displayState = TOP_MENU;		
 		break;
 		
 	default:
@@ -742,50 +791,55 @@ void rotaryButtonRelease(void* ref) {
 
 	if (encoderHeld) {
 		encoderHeld = false;
-
 		return;
 	}
 
 	unsigned long currentMillis = millis();
 
 	switch (displayState){
-		case TOP_MENU:
+		case TOP_MENU: {
 			DEBUG_SERIAL.print("Selected Top Menu Item: "); DEBUG_SERIAL.println(selectedIndex);
-			switch (selectedIndex) {
-				case 0:
+			displayStates nextState = topDisplayNextState[selectedIndex];
+
+			switch (nextState) {
+				case VOLUME_CHANGE:
 					selectedIndex = theVol;
-					displayState = VOLUME_CHANGE;
 					break;
 
-				case 1:
+				case TRACK_SELECT:
 					selectedIndex = trackNumber;
-					displayState = TRACK_SELECT;
 					break;
 
-				case 2:
+				case LOAD_CONFIG:
+				case SAVE_CONFIG:
 					selectedIndex = 0;
-					displayState = LOAD_CONFIG;
 					break;
 
-				case 3:
-					selectedIndex = 0;
-					displayState = SAVE_CONFIG;
+				case OVERHEAT_TIME_SET:
+					selectedIndex = OVERHEAT_TIME;
+					break;
+
+				case WARNING_TIME_SET:
+					selectedIndex = FIRING_WARN_TIME;
 					break;
 
 				default:
 					break;
 			}
+
+			displayState = nextState;
+			}
 			break;
 
 		case VOLUME_CHANGE:
 			setVolume(currentMillis, selectedIndex);
-			selectedIndex = 0;
+			selectedIndex = getTopLevelIndex(displayState);
 			displayState = TOP_MENU;			
 			break;
 
 		case TRACK_SELECT:
 			setSDTrack(currentMillis, selectedIndex);
-			selectedIndex = 1;
+			selectedIndex = getTopLevelIndex(displayState);
 			displayState = TOP_MENU;
 			break;
 
@@ -794,7 +848,7 @@ void rotaryButtonRelease(void* ref) {
 				cmdMessenger.sendCmd(eventLoadConfig);
 			}
 
-			selectedIndex = 2;
+			selectedIndex = getTopLevelIndex(displayState);
 			displayState = TOP_MENU;
 			break;
 		case SAVE_CONFIG:
@@ -802,7 +856,21 @@ void rotaryButtonRelease(void* ref) {
 				cmdMessenger.sendCmd(eventWriteConfig);
 			}
 
-			selectedIndex = 3;
+			selectedIndex = getTopLevelIndex(displayState);
+			displayState = TOP_MENU;
+			break;
+
+		case OVERHEAT_TIME_SET:
+			OVERHEAT_TIME = selectedIndex;
+			updatePackSettings(currentMillis);
+			selectedIndex = getTopLevelIndex(displayState);
+			displayState = TOP_MENU;
+			break;
+
+		case WARNING_TIME_SET:
+			FIRING_WARN_TIME = selectedIndex;
+			updatePackSettings(currentMillis);
+			selectedIndex = getTopLevelIndex(displayState);
 			displayState = TOP_MENU;
 			break;
 
@@ -820,7 +888,7 @@ void rotaryMove(unsigned long currentMillis, int movement) {
 	if (displayState != DISPLAY_OFF) {
 		switch (displayState) {
 			case TOP_MENU:
-				selectedIndex = looparound((selectedIndex + movement) , 4);
+				selectedIndex = looparound((selectedIndex + movement) , topDisplayItemCount);
 				break;
 
 			case VOLUME_CHANGE:
@@ -835,6 +903,16 @@ void rotaryMove(unsigned long currentMillis, int movement) {
 			case LOAD_CONFIG:
 			case SAVE_CONFIG:
 				selectedIndex = looparound((selectedIndex + movement), 2);
+				break;
+
+			// Move by 100ms at a time
+			case OVERHEAT_TIME_SET:
+				selectedIndex = constrain(selectedIndex + (100*movement), OVERHEAT_MIN_TIME, OVERHEAT_MAX_TIME);
+				break;
+
+			// Move by 100ms at a time
+			case WARNING_TIME_SET:
+				selectedIndex = constrain(selectedIndex + (100 * movement), FIRING_WARN_MIN_TIME, FIRING_WARN_MAX_TIME);
 				break;
 
 			default:
@@ -1104,6 +1182,8 @@ void attachCmdMessengerCallbacks() {
 	cmdMessenger.attach(eventPackEncoderTurn, onPackEncoderTurn);
 	cmdMessenger.attach(eventSetVolume, onPackSetVolume);
 	cmdMessenger.attach(eventSetSDTrack, onPackSetTrack);
+	cmdMessenger.attach(eventSendConfigToWand, onSendConfigToWand);
+	cmdMessenger.attach(eventDisplayVolume, onDisplayVolume);
 
 	cmdMessenger.attach(eventUpdateMusicPlayingState, onUpdateMusicPlayingState);
 	cmdMessenger.attach(eventPackConnect, onPackConnect);
@@ -1162,24 +1242,22 @@ void onPackSetTrack() {
 	setSDTrack(millis(), newTrack);
 }
 
-bool firstVolumeSet = true;
-
 void onPackSetVolume() {
 	unsigned long currentMillis = millis();
 	
 	DEBUG_SERIAL.println("Pack Set Volume");
 	int newVol = cmdMessenger.readInt16Arg();
 	DEBUG_SERIAL.printf("Pack Requested Volume Change To: %i\n", newVol);
-	if (firstVolumeSet) {
-		firstVolumeSet = false;
-	}
-	else {
-		displayState = VOLUME_DISPLAY;
-		selectedIndex = newVol;
-		lastDisplayUpdate = currentMillis;
-		drawDisplay(currentMillis);
-	}	
 	setVolume(currentMillis, newVol);
+}
+
+void onDisplayVolume() {
+	unsigned long currentMillis = millis();
+
+	displayState = VOLUME_DISPLAY;
+	selectedIndex = theVol;
+	lastDisplayUpdate = currentMillis;
+	drawDisplay(currentMillis);
 }
 
 void onUpdateMusicPlayingState() {
@@ -1195,6 +1273,19 @@ void onPackConnect() {
 	drawDisplay(millis());
 }
 
+void onSendConfigToWand() {
+	OVERHEAT_TIME = cmdMessenger.readInt16Arg();
+	FIRING_WARN_TIME = cmdMessenger.readInt16Arg();
+
+	DEBUG_SERIAL.println("Received Config From Pack");
+}
+
+void updatePackSettings(unsigned long currentMillis) {
+	cmdMessenger.sendCmdStart(eventSendConfigToPack);
+	cmdMessenger.sendCmdArg(OVERHEAT_TIME);
+	cmdMessenger.sendCmdArg(FIRING_WARN_TIME);
+	cmdMessenger.sendCmdEnd();
+}
 
 /*  ----------------------
 	Body LED Management
