@@ -103,7 +103,7 @@ bool bluetoothMode = false;
 bool musicPlaying = false;
 bool packConnected = false;
 int trackNumber = defaultTrack;
-unsigned long stateLastChanged;
+unsigned long stateLastChanged = 0;
 
 uint32_t savedTipColour;
 unsigned long lastTipChange;
@@ -130,12 +130,13 @@ const uint32_t firingLEDColours[numFiringLEDColours] = {
 const int firingBlinkMS = 500;
 const int warningBlinkMS = 150;
 const int ventFlickerPercentage = 15;
+const int batteryIndicatorFadePeriod = 2000;
 
 const uint32_t ventColour = Adafruit_NeoPixel::Color(250, 250, 250, 250);
 const uint32_t ventFlickerColour = Adafruit_NeoPixel::Color(0, 0, 250, 100);
 const uint32_t tipColour = Adafruit_NeoPixel::Color(0, 0, 0, 100);
 const uint32_t frontColour = Adafruit_NeoPixel::Color(200, 200, 200, 200);
-const uint32_t topForwardBatteryColour = Adafruit_NeoPixel::Color(0, 0, 50, 0);
+const uint32_t topForwardBatteryColour = Adafruit_NeoPixel::Color(0, 0, 25, 0);
 const uint32_t topForwardColour = Adafruit_NeoPixel::Color(200, 200, 200, 0);
 const uint32_t topBackColour = Adafruit_NeoPixel::Color(0, 0, 0, 100);
 const uint32_t sloBloColour = Adafruit_NeoPixel::Color(255, 0, 0, 0);
@@ -1177,7 +1178,15 @@ void bodyUpdate() {
 	unsigned long currentMillis = millis();
 
 	switch (state) {
-	case OFF:
+	case OFF: {
+		float timeSinceStateChange = (max(stateLastChanged, currentMillis) - stateLastChanged) % (2 * batteryIndicatorFadePeriod);
+		float lightIntensity = timeSinceStateChange < batteryIndicatorFadePeriod ? timeSinceStateChange / batteryIndicatorFadePeriod : ((2 * batteryIndicatorFadePeriod) - timeSinceStateChange) / batteryIndicatorFadePeriod;
+		uint32_t lightColour = colourMultiply(topForwardBatteryColour, lightIntensity);
+		bodyLights.setPixelColor(TOP_FORWARD_INDEX, lightColour);
+		bodyLights.show();
+		lastBodyChange[TOP_FORWARD_INDEX] = currentMillis;
+		savedBodyColours[TOP_FORWARD_INDEX] = lightColour;
+		}
 		break;
 
 	case BOOTING:{
@@ -1227,18 +1236,21 @@ void bodyUpdate() {
 		bool topLEDLit = (timeSinceFiringStart % (2 * firingBlinkMS)) < firingBlinkMS;
 		bodyLights.setPixelColor(TOP_FORWARD_INDEX, topLEDLit ? topForwardColour : ledOff);
 		bodyLights.setPixelColor(FRONT_INDEX, topLEDLit ? ledOff : frontColour);
+		savedBodyColours[TOP_FORWARD_INDEX] = topLEDLit ? topForwardColour : ledOff;
+		savedBodyColours[FRONT_INDEX] = topLEDLit ? ledOff : frontColour;
 		lastBodyChange[TOP_FORWARD_INDEX] = currentMillis;
 		lastBodyChange[FRONT_INDEX] = currentMillis;
 		bodyLights.show();
 	}
 		break;
 
-	case VENTING:
+	case VENTING: {
 		uint32_t thisColour = random(0, 100) < 2 * ventFlickerPercentage ? ventFlickerColour : ventColour;
 		savedBodyColours[VENT_INDEX] = thisColour;
 		lastBodyChange[VENT_INDEX] = currentMillis;
 		bodyLights.setPixelColor(VENT_INDEX, thisColour);
 		bodyLights.show();
+	}
 		break;
 
 	case FIRING_STOP:
