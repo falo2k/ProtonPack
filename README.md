@@ -72,6 +72,9 @@ The light colours I've used in my code were chosen to work with the lenses and p
 - Power cell is a layer of frosted acrylic + a top layer of blue acrylic (so lighting aims to send green and blue only)  
 - Cyclotron lenses are just frosted acrylic so I can do any colour.  They are mounted over printed reflectors lined with a red chrome vinyl layer to give them a red tiny when off.  
 - For the wand LED covers the slo blo is red, tip hat is orange, front shelf is opaque white, top front is clear, and top rear is orange.  
+
+## Music Tracks
+If you want to add more music tracks to the pack, bearing in mind that it might take a while to change them given the simple scrolling menu, then you can update the arrays in ProtonPackCommon.h to reference them.  Make sure to update the track count as well.  
   
 ### Future Plans
 - General code refactoring where I've got a few inconsistent approaches.  Tidy up method signatures a bit to be consistent with ordering of arguments, remove TimerEvent as I've ended up with some custom implementations of the same principle so should be consistent.  
