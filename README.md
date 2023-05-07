@@ -2,7 +2,7 @@
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?business=ESPELHR7Z3MMJ&no_recurring=0&item_name=Coffee+makes+the+world+go+round&currency_code=GBP)
 # Teensy Based Proton Pack Electronics
 This is my implementation of the electronics for a Ghostbusters Proton Pack.  It uses a Teensy microcontroller in both parts of the kit (Pack and Wand) and communicates between them over 4 wires (power + serial).  For now I have kept it to a simple movie implementation with some additions - overheating and music playback.  I've added two features that are a bit unusual:
-- An OLED display in the rear box on the wand is used for managing volume control and track selection, in conjunctions with a rotary encoder (push/turn) in the top knob.
+- An OLED display in the rear box on the wand is used for managing volume control and track selection, in conjunctions with a rotary encoder (push/turn) in the front knob.
 - A bluetooth receiver can be turned on for playback of anything not available on the SD card.  The module I'm using will mix the stereo audio down to mono for a single pack, but comes as a pair for True Wireless Stereo.  The other board will be in a friend's pack so we can use the packs as a complete speaker set.
   
 It is designed to fit inside the 3D printed pack available [here - the Q-Pack](https://github.com/mr-kiou/q-pack).  It's been developed for a Mk3 pack - I will review it at some point in the future for Mk4 compatability.
@@ -51,7 +51,7 @@ Once power is on to both boards, they will start up in the state determined by t
 - In music mode a single press will act as a stop button, while a long press will move to the previous track in the list.
 
 **Pack Crank Knob**  
-- Connected to an encoder, this will currently just mimic the behaviour of the wand encoder (see the OLED Menu System below).
+- Connected to an encoder, this independently controls volume of the pack when held and turned.
 
 **Pack Ion Switch**  
 - Currently unused.
@@ -59,10 +59,13 @@ Once power is on to both boards, they will start up in the state determined by t
 ### OLED Menu System
 A long press on the Wand encoder will activate the menu (to avoid accidental bumps).  While active, a long press will also cancel the menu.  The menu has an automatic timeout so will not stay open indefinitely.  Single click to select / confirm menu items
 
-Currently there are three features for control:  
+Currently there these features for control:  
 1. **Volume**: This changes the volume of the amplifier in the pack via i2c.  This will update as you turn the knob.  
 2. **Track Change**: This lets you select the extact track you want queued up for playback from the SD card (if enabled).  Single click to confirm the selection, or long press to cancel.  Selecting a new track while one is playing will cause the new track to start immediately.  Note that using the next/prev track shortcuts on the INT/TIP buttons will display the new track name in the display.  
-3. **Load/Save Config**: This will load or save the volume and track configuration to a file on the SD card.  This is loaded as the default when the pack is first powered  
+3. **Overheat/Warning Time**: For overheat mode, this will change the timings for how long until the warning starts (overheat) and how long the warning lasts before forced venting (warning).  
+4. **Load/Save Config**: This will load or save the volume, track, and timing configuration to a file on the SD card.  This is loaded as the default when the pack is first powered  
+  
+A long press in any menu item should take you back up one level.  
   
 ### Lights Colours & Lenses
 The light colours I've used in my code were chosen to work with the lenses and printed hats I'm using.  I would recommend testing against your own installation and tweaking them accordingly.  My setup is:  
@@ -103,7 +106,7 @@ Where I can remember it, I've listed the Equipment used and links to purchase be
 3 x [2 Position MTS102 mini toggle switches](https://www.amazon.co.uk/gp/product/B01BWL7Z44/) for wand  
 1 x [Black Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B00TXNXU4S)  
 1 x [Red Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B008ZYE9LY)  
-2 x [EC11 Rotary Encoder with Switch](https://www.ebay.co.uk/sch/i.html?_from=R40&_trksid=p2380057.m570.l1313&_nkw=ec11+rotary+encoder&_sacat=0) for the pack (crank) and wand (top / front knob).  
+2 x [EC11 Rotary Encoder with Switch](https://www.ebay.co.uk/sch/i.html?_from=R40&_trksid=p2380057.m570.l1313&_nkw=ec11+rotary+encoder&_sacat=0) for the pack (crank) and wand (top / front knob).  Lengths will depend on your shells, and where you're placing the encoder.  
   
 Ion switches can be picked up on Etsy.  
   
