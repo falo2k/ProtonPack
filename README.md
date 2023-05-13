@@ -86,6 +86,8 @@ If you want to add more music tracks to the pack, bearing in mind that it might 
 - The Ion Switch input currently doesn't do anything.  I may use this as either a hard or soft toggle for any future smoke effects.  
 - Check compatibility with Mk4 Q-Pack and generally review the PCBs for other layout options.  Now I've got my own wiring in, I might see some better positioning for connectors, consider breakout boards, etc.  
 - Consider either including an isolated converter in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.  
+- Reorient the wand board to make the USB port accessible when installed.  At the moment you can't get in there for updates without pulling the Teensy or the whole board.  Neither of those things are fun, and make software updates a pain.  
+- Consider a better menu system, and make **all** configurable settings switchable in software.  That would reduce the need for any trial and error with USB cables attached and would allow for all tweaking of things like switch directions, cyclotron spin directions, etc. possible through the OLED menu.  
 
 ## Hardware
 ### BOM
