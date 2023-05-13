@@ -74,6 +74,8 @@ The light colours I've used in my code were chosen to work with the lenses and p
 - For the wand LED covers the slo blo is red, tip hat is orange, front shelf is opaque white, top front is clear, and top rear is orange.  
 
 ## Music Tracks
+I've removed the music tracks from this repository, but you can see which ones I had loaded in ProtonPackCommon.h.  You can replace these with your own copies, or adapt the header file to manage your own.  I used 16 bit 44.1khz wave files downmixed to mono as I only have a single speaker setup in the pack.  I believe the audio board does support MP3 with some overhead, but there's so much space on a SD card that I didn't care.  Audacity was used for file processing because it's great.  
+  
 If you want to add more music tracks to the pack, bearing in mind that it might take a while to change them given the simple scrolling menu, then you can update the arrays in ProtonPackCommon.h to reference them.  Make sure to update the track count as well.  
   
 ### Future Plans
