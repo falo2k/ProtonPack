@@ -67,6 +67,8 @@ Currently there these features for control:
   
 A long press in any menu item should take you back up one level.  
   
+(Demo video here)[https://youtu.be/a6icHuyzO3Q]  
+  
 ### Lights Colours & Lenses
 The light colours I've used in my code were chosen to work with the lenses and printed hats I'm using.  I would recommend testing against your own installation and tweaking them accordingly.  My setup is:  
 - Power cell is a layer of frosted acrylic + a top layer of blue acrylic (so lighting aims to send green and blue only)  
