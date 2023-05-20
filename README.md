@@ -30,10 +30,10 @@ You'll need the libraries listed in the section below.
 [Switch](https://github.com/avandalen/avdweb_Switch) - Primarily used for the debouncing and callback features for switches.  Detects events for pressing, holding, and releasing.  
 
 ### Pack Operation
-Once power is on to both boards, they will start up in the state determined by the current switch positions, so you can switch straight into music mode if you want.  If the pack is booted without a wand connected, it will enter bluetooth mode after 5 seconds.  
+Once power is on to both boards, they will start up in the state determined by the current switch positions, so you can switch straight into music mode if you want.  If the pack is powered without a wand connected, it will enter bluetooth mode after 5 seconds.  When both are connected, and the Activate switch is in the off position, a top light on the wand will pulse a faint blue to remind you that your battery is still connected!  
 
 **Act Switch on Left Box**  
-- This toggles the pack power for both movie and music mode.
+- This toggles the pack power-up for both movie and music mode.
 
 **Lower Switch Next to Bargraph**  
 - In movie mode this toggles whether or not the overheat warning will kick in after a period of time and then move to venting after further warning.  If off, firing will continue indefinitely.  
@@ -67,16 +67,16 @@ Currently there these features for control:
   
 A long press in any menu item should take you back up one level.  
   
-(Demo video here)[https://youtu.be/a6icHuyzO3Q]  
+[Demo video here](https://youtu.be/a6icHuyzO3Q)
   
 ### Lights Colours & Lenses
 The light colours I've used in my code were chosen to work with the lenses and printed hats I'm using.  I would recommend testing against your own installation and tweaking them accordingly.  My setup is:  
 - Power cell is a layer of frosted acrylic + a top layer of blue acrylic (so lighting aims to send green and blue only)  
-- Cyclotron lenses are just frosted acrylic so I can do any colour.  They are mounted over printed reflectors lined with a red chrome vinyl layer to give them a red tiny when off.  
+- Cyclotron lenses are just frosted acrylic so I can do any colour.  They are mounted over printed reflectors lined with a red chrome vinyl layer to give them a red tint when off.  
 - For the wand LED covers the slo blo is red, tip hat is orange, front shelf is opaque white, top front is clear, and top rear is orange.  
 
 ## Music Tracks
-I've removed the music tracks from this repository, but you can see which ones I had loaded in ProtonPackCommon.h.  You can replace these with your own copies, or adapt the header file to manage your own.  I used 16 bit 44.1khz wave files downmixed to mono as I only have a single speaker setup in the pack.  I believe the audio board does support MP3 with some overhead, but there's so much space on a SD card that I didn't care.  Audacity was used for file processing because it's great.  
+I've removed the music tracks from this repository, but you can see which ones I had loaded in [ProtonPackCommon.h](./Teensy/ProtonPackCommon/src/ProtonPackCommon.h).  You can replace these with your own copies, or adapt the header file to manage your own.  I used 16 bit 44.1khz wave files downmixed to mono as I only have a single speaker setup in the pack.  I believe the audio board does support MP3 with some overhead, but there's so much space on a SD card that I didn't care.  Audacity was used for file processing because it's great.  
   
 If you want to add more music tracks to the pack, bearing in mind that it might take a while to change them given the simple scrolling menu, then you can update the arrays in ProtonPackCommon.h to reference them.  Make sure to update the track count as well.  
   
