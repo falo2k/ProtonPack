@@ -6,8 +6,8 @@ This is my implementation of the electronics for a Ghostbusters Proton Pack.  It
 - A [bluetooth receiver](./Images/bluetooth.jpg) can be turned on for playback of anything not available on the SD card.  The module I'm using will mix the stereo audio down to mono for a single pack, but comes as a pair for True Wireless Stereo.  The other board will be in a friend's pack so we can use the packs as a complete speaker set.
   
 It is designed to fit inside the 3D printed pack available [here - the Q-Pack](https://github.com/mr-kiou/q-pack).  It's been developed for a Mk3 pack - I will review it at some point in the future for Mk4 compatability.
-
-*TBD Demo Video*
+  
+[![DEMO VIDEO](./Images/demo_video.jpg)](https://www.youtube.com/watch?v=gk1BOT_1J4o)  
 
 ## Software
 The code is set up as a VS solution/project set using [Visual Micro](https://www.visualmicro.com/), but you can tweak this to your preferred environment.  There are three core files:
@@ -125,7 +125,7 @@ You may want to do your own LEDs.  Numbers and type can be varied in the code, t
 1 x [144LEDs/m SK6812 RGBW Strip](https://www.aliexpress.com/item/32476317187.html?spm=a2g0o.order_list.order_list_main.5.74871802yO2AMH).  144 LEDs/m is just enough density to give you 15 LEDs in the Power Cell.  You can get a minimum length if you like.  
 13+ x [SK6812 RGBW Chips](https://www.aliexpress.com/item/1005002509850925.html?spm=a2g0o.order_list.order_list_main.29.74871802yO2AMH) which I use in the wand, pack vent, and for the cyclotron.  Worth getting some spares in case you fry one.  
 1 x [RGBW LED jewel](https://www.aliexpress.com/item/32825068416.html?spm=a2g0o.order_list.order_list_main.56.74871802yO2AMH) for the barrel light  
-1 x [28 Segment Bar Graph](http://www.barmeter.com/download/bl28-3005sda04y.pdf).  Sourcing for this always ends up out of date, so hunt around Aliexpress or try asking on one of the FB groups.  Note that there are two versions of this bargraph, a common anode and common cathode version.  My code is designed for the BL28-3005SDK04Y model (note the A or K in the model name differentiating them).  It can be adapted for the other by simply changing the array mapping in the common header to point to the correct row/column references for your model.  
+1 x [28 Segment Bar Graph](http://www.barmeter.com/download/bl28-3005sda04y.pdf).  Sourcing for this always ends up out of date, so hunt around Aliexpress or try asking on one of the FB groups.  Note that there are two versions of this bargraph, a common anode and common cathode version.  My code is designed for the [BL28-3005SDK04Y](./Images/bargraphwiring.jpg) model (note the A or K in the model name differentiating them).  It can be adapted for the other by simply changing the array mapping in the common header to point to the correct row/column references for your model.  
 
 **Capacitors and Resistors**  
 4 x 4.7K Ohm Resistors for pullups on the Teensy i2c lines  
@@ -151,7 +151,7 @@ Source these where you like depending on how many you need / want for other proj
 ### PCBs
 I have created a couple of PCBs to make installation neater in a Q-Pack.  I've shared the production files in the PCBs folder for use with [JLCPCB](https://jlcpcb.com/).  I used Altium Circuitmaker to create these, so it's hard to share a useful copy of them.  I plan at some point to migrate these to KiCad but that requires time to learn KiCad.  It'll probably happen when I start working on a better belt gizmo :)  
   
-The folder also contains STLs to mount the boards and keep the solder joins clear of the mounting surface.  For the Wand, it is just a spacer - the board is designed to fit along the handle side of the Mk3 Q-Pack, using the external M3 bolt to secure it with a nut internally.  This should position the serial/power connections for the handle exit, but leave enough space for an encoder to run through the top knob if desired.  For the pack, it's a backer designed to have M3x5x4 heat sets (standard size used in [Vorons](https://www.vorondesign.com/)) added to the holes so the board can be attached and removed easily with M3 bolts.  The backer can then be secured in place to the motherboard with VHB tape.  It should be slim enough to fit underneath the booster box of the Mk3 Q-Pack.  
+The folder also contains STLs to mount the boards and keep the solder joins clear of the mounting surface.  For the Wand, it is just a spacer - the board is designed to fit along the handle side of the Mk3 Q-Pack, using the external M3 bolt to secure it with a nut internally.  This should position the serial/power connections for the handle exit, but leave enough space for an encoder to run through the top/front knob if desired.  For the pack, it's a backer designed to have M3x5x4 heat sets (standard size used in [Vorons](https://www.vorondesign.com/)) added to the holes so the board can be attached and removed easily with M3 bolts.  The backer can then be secured in place to the motherboard with VHB tape.  It should be slim enough to fit underneath the booster box of the Mk3 Q-Pack.  
 
 Lastly, the current version did not take into account the 3mm inset on the box lid.  I have added an alternative STL for this into the folder, but will refactor the PCBs when I redo them in the future.  My STL for the lid also changes some hole sizes as I'm using M3 + heat inserts to attach to the box, and M4 for metal V-Hook/S-Hook connectors.  
   
