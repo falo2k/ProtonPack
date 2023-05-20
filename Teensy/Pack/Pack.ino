@@ -20,7 +20,7 @@
     Variables to flip switch directions depending on
     your wiring implementation
 ----------------------- */
-int rotaryDirection = -1;
+int rotaryDirection = 1;
 const bool SW_ION_INVERT = false;
 int cyclotronDirection = 1;
 
@@ -127,6 +127,7 @@ const int powerDownPCellDecayTickPeriod = (int)(0.025 * POWERDOWN_TIME);
 unsigned long lastPowerCellChange;
 const uint32_t pCellColour = Adafruit_NeoPixel::Color(150, 150, 250);
 float pCellMinBar = 0.0;
+float pCellMaxMinBar = 12;
 // Rate for power cell minimum to climb when firing
 const int pCellClimbPeriod = 500;
 const float pCellClimbRate = 1.0 / pCellClimbPeriod;
@@ -273,6 +274,9 @@ void loop() {
             DEBUG_SERIAL.println("Waiting for wand timed out.  Enabling demo mode.");
             wandConnected = true;
 
+            readConfigFile(currentMillis);
+            setvolume(theVol);
+
             initialiseState(MUSIC_MODE, currentMillis);
             bluetoothMode = true;
             toggleBluetoothModule(bluetoothMode);
@@ -306,11 +310,15 @@ void readConfigFile(unsigned long currentMillis) {
         minIni ini(configFile);
         theVol = ini.geti("", configVolume, defaultVol);
         trackNumber = ini.geti("", configTrack, defaultTrack);
+        OVERHEAT_TIME = ini.geti("", configOverheat, OVERHEAT_DEFAULT_TIME);
+        FIRING_WARN_TIME = ini.geti("", configWarn, FIRING_WARN_DEFAULT_TIME);
     }
     else {
         DEBUG_SERIAL.println("No Config File Found.  Using Default values.");
         trackNumber = defaultTrack;
         theVol = defaultVol;
+        OVERHEAT_TIME = OVERHEAT_DEFAULT_TIME;
+        FIRING_WARN_TIME = FIRING_WARN_DEFAULT_TIME;
     }
 }
 
@@ -321,6 +329,8 @@ void writeConfigFile(unsigned long currentMillis) {
 
     ini.put("", configVolume, theVol);
     ini.put("", configTrack, trackNumber);
+    ini.put("", configOverheat, OVERHEAT_TIME);
+    ini.put("", configWarn, FIRING_WARN_TIME);
 }
 
 /*  ----------------------
@@ -364,18 +374,17 @@ bool encoderPressed = false;
 void rotaryButtonPress(void* ref) {
     DEBUG_SERIAL.println("Rotary Pressed");
     encoderPressed = true;
-    cmdMessenger.sendCmd(eventPackEncoderButton, PRESSED);
+    //cmdMessenger.sendCmd(eventPackEncoderButton, PRESSED);
 }
 
 void rotaryButtonLongPress(void* ref) {
     DEBUG_SERIAL.println("Rotary Held");
     encoderHeld = true;
-
-    cmdMessenger.sendCmd(eventPackEncoderButton, HELD);    
+    //cmdMessenger.sendCmd(eventPackEncoderButton, HELD);    
 }
 
 void rotaryButtonRelease(void* ref) {
-    // Encoder is bouncing weirdly on startup
+    // Encoder is bouncing weirdly on startup.  Ingore if it wasn't pressed in the first place.
     if (!encoderPressed) { return; }
     else {
         encoderPressed = false;
@@ -387,11 +396,17 @@ void rotaryButtonRelease(void* ref) {
         encoderHeld = false;
     }
 
-    cmdMessenger.sendCmd(eventPackEncoderButton, RELEASED);
+    //cmdMessenger.sendCmd(eventPackEncoderButton, RELEASED);
 }
 
 void rotaryMove(unsigned long currentMillis, int movement) {
-    cmdMessenger.sendCmd(eventPackEncoderTurn, movement);
+    // Change the volume only if held and moved
+    if (encoderHeld) {
+        setvolume(theVol + movement);
+        cmdMessenger.sendCmd(eventSetVolume, theVol);
+        cmdMessenger.sendCmd(eventDisplayVolume, theVol);
+    }
+    //cmdMessenger.sendCmd(eventPackEncoderTurn, movement);
 }
 
 /*  ----------------------
@@ -416,12 +431,17 @@ boolean setvolume(int8_t v) {
     if (v != theVol) {
         DEBUG_SERIAL.printf("Setting volume to %i\n", v);
     }
+
+    theVol = v;
+
     Wire.beginTransmission(MAX9744_I2CADDR);
     Wire.write(v);
-    if (Wire.endTransmission() == 0)
+    if (Wire.endTransmission() == 0) {        
         return true;
-    else
+    }
+    else {
         return false;
+    }
 }
 
 void toggleBluetoothModule(bool state) {
@@ -462,6 +482,7 @@ void attachCmdMessengerCallbacks() {
     cmdMessenger.attach(eventLoadConfig, onLoadConfig);
     cmdMessenger.attach(eventWriteConfig, onWriteConfig);
     cmdMessenger.attach(eventWandConnect, onWandConnect);
+    cmdMessenger.attach(eventSendConfigToPack, onSendConfigToPack);
 }
 
 void onUnknownCommand()
@@ -527,10 +548,20 @@ void onLoadConfig() {
     readConfigFile(millis());
     cmdMessenger.sendCmd(eventSetVolume, theVol);
     cmdMessenger.sendCmd(eventSetSDTrack, trackNumber);
+    cmdMessenger.sendCmdStart(eventSendConfigToWand);
+    cmdMessenger.sendCmdArg(OVERHEAT_TIME);
+    cmdMessenger.sendCmdArg(FIRING_WARN_TIME);
+    cmdMessenger.sendCmdEnd();
 }
 
 void onWriteConfig() {
     writeConfigFile(millis());
+}
+
+void onSendConfigToPack() {
+    DEBUG_SERIAL.println("Received configuration from wand");
+    OVERHEAT_TIME = cmdMessenger.readInt16Arg();
+    FIRING_WARN_TIME = cmdMessenger.readInt16Arg();
 }
 
 // Wand Connect - Send acknowledgment
@@ -683,7 +714,7 @@ void stateUpdate(unsigned long currentMillis) {
         }
 
         cyclotronSpinPeriod = max(cyclotronMinPeriod, cyclotronSpinPeriod - (cyclotronFiringAcceleration * (currentMillis - lastStateUpdate)));
-        pCellMinBar = min(PCELL_LED_COUNT, pCellMinBar + (pCellClimbRate * (currentMillis - lastStateUpdate)));
+        pCellMinBar = min(pCellMaxMinBar, pCellMinBar + (pCellClimbRate * (currentMillis - lastStateUpdate)));
         break;
 
     case FIRING_STOP:

@@ -2,12 +2,12 @@
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?business=ESPELHR7Z3MMJ&no_recurring=0&item_name=Coffee+makes+the+world+go+round&currency_code=GBP)
 # Teensy Based Proton Pack Electronics
 This is my implementation of the electronics for a Ghostbusters Proton Pack.  It uses a Teensy microcontroller in both parts of the kit (Pack and Wand) and communicates between them over 4 wires (power + serial).  For now I have kept it to a simple movie implementation with some additions - overheating and music playback.  I've added two features that are a bit unusual:
-- An OLED display in the rear box on the wand is used for managing volume control and track selection, in conjunctions with a rotary encoder (push/turn) in the top knob.
-- A bluetooth receiver can be turned on for playback of anything not available on the SD card.  The module I'm using will mix the stereo audio down to mono for a single pack, but comes as a pair for True Wireless Stereo.  The other board will be in a friend's pack so we can use the packs as a complete speaker set.
+- An OLED display in the rear box on the wand is used for managing volume control and track selection, in conjunctions with a rotary encoder (push/turn) in the front knob.
+- A [bluetooth receiver](./Images/bluetooth.jpg) can be turned on for playback of anything not available on the SD card.  The module I'm using will mix the stereo audio down to mono for a single pack, but comes as a pair for True Wireless Stereo.  The other board will be in a friend's pack so we can use the packs as a complete speaker set.
   
 It is designed to fit inside the 3D printed pack available [here - the Q-Pack](https://github.com/mr-kiou/q-pack).  It's been developed for a Mk3 pack - I will review it at some point in the future for Mk4 compatability.
-
-*TBD Demo Video*
+  
+[![DEMO VIDEO](./Images/demo_video.jpg)](https://www.youtube.com/watch?v=gk1BOT_1J4o)  
 
 ## Software
 The code is set up as a VS solution/project set using [Visual Micro](https://www.visualmicro.com/), but you can tweak this to your preferred environment.  There are three core files:
@@ -51,7 +51,7 @@ Once power is on to both boards, they will start up in the state determined by t
 - In music mode a single press will act as a stop button, while a long press will move to the previous track in the list.
 
 **Pack Crank Knob**  
-- Connected to an encoder, this will currently just mimic the behaviour of the wand encoder (see the OLED Menu System below).
+- Connected to an encoder, this independently controls volume of the pack when held and turned.
 
 **Pack Ion Switch**  
 - Currently unused.
@@ -59,18 +59,38 @@ Once power is on to both boards, they will start up in the state determined by t
 ### OLED Menu System
 A long press on the Wand encoder will activate the menu (to avoid accidental bumps).  While active, a long press will also cancel the menu.  The menu has an automatic timeout so will not stay open indefinitely.  Single click to select / confirm menu items
 
-Currently there are three features for control:  
+Currently there these features for control:  
 1. **Volume**: This changes the volume of the amplifier in the pack via i2c.  This will update as you turn the knob.  
 2. **Track Change**: This lets you select the extact track you want queued up for playback from the SD card (if enabled).  Single click to confirm the selection, or long press to cancel.  Selecting a new track while one is playing will cause the new track to start immediately.  Note that using the next/prev track shortcuts on the INT/TIP buttons will display the new track name in the display.  
-3. **Load/Save Config**: This will load or save the volume and track configuration to a file on the SD card.  This is loaded as the default when the pack is first powered  
+3. **Overheat/Warning Time**: For overheat mode, this will change the timings for how long until the warning starts (overheat) and how long the warning lasts before forced venting (warning).  
+4. **Load/Save Config**: This will load or save the volume, track, and timing configuration to a file on the SD card.  This is loaded as the default when the pack is first powered  
+  
+A long press in any menu item should take you back up one level.  
+  
+(Demo video here)[https://youtu.be/a6icHuyzO3Q]  
+  
+### Lights Colours & Lenses
+The light colours I've used in my code were chosen to work with the lenses and printed hats I'm using.  I would recommend testing against your own installation and tweaking them accordingly.  My setup is:  
+- Power cell is a layer of frosted acrylic + a top layer of blue acrylic (so lighting aims to send green and blue only)  
+- Cyclotron lenses are just frosted acrylic so I can do any colour.  They are mounted over printed reflectors lined with a red chrome vinyl layer to give them a red tiny when off.  
+- For the wand LED covers the slo blo is red, tip hat is orange, front shelf is opaque white, top front is clear, and top rear is orange.  
 
+## Music Tracks
+I've removed the music tracks from this repository, but you can see which ones I had loaded in ProtonPackCommon.h.  You can replace these with your own copies, or adapt the header file to manage your own.  I used 16 bit 44.1khz wave files downmixed to mono as I only have a single speaker setup in the pack.  I believe the audio board does support MP3 with some overhead, but there's so much space on a SD card that I didn't care.  Audacity was used for file processing because it's great.  
+  
+If you want to add more music tracks to the pack, bearing in mind that it might take a while to change them given the simple scrolling menu, then you can update the arrays in ProtonPackCommon.h to reference them.  Make sure to update the track count as well.  
+  
 ### Future Plans
-- Some pin headers in the pack are already spare to support adding a smoke machine to the pack at a later date for venting (marked as IO2 on the PCB).  This should be easy to trigger in software.
-- Alternative lighting schemes, sounds, animations, etc. can be added relatively easily.  Switching would probably be done with additional menu items through the OLED controls.
-- I'd like to add more granular volume control, again through the menu, to individually tweak the volume of SFX, Music, and Bluetooth channels.
-- The Ion Switch input currently doesn't do anything.  I may use this as either a hard or soft toggle for any future smoke effects.
-- Check compatibility with Mk4 Q-Pack and generally review the PCBs for other options.  Now I've got my own wiring in, I might see some better positioning for connectors, consider breakout boards, etc.
-- Consider either including an isolated converter in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.
+- General code refactoring where I've got a few inconsistent approaches.  Tidy up method signatures a bit to be consistent with ordering of arguments, remove TimerEvent as I've ended up with some custom implementations of the same principle so should be consistent.  
+- Some pin headers in the pack are already spare to support adding a smoke machine to the pack at a later date for venting (marked as IO2 on the PCB).  This should be easy to add triggers in software at the appropriate state changes.  I've seen some interesting looking i2c relay boards or i2c IO expanders out there as alternative options if I want more granular control over pump, smoke, fan for the effects.  
+- Alternative lighting schemes, sounds, animations, etc. can be added relatively easily.  Switching would probably be done with additional menu items through the OLED controls.  
+- I'll play with adding more granular volume control, again through the menu, to individually tweak the volume of SFX, Music, and Bluetooth channels.  This may turn out to be unnnecessary given the sounds should already be balanced and bluetooth volume should be handled by the device sending audio.  
+- The Ion Switch input currently doesn't do anything.  I may use this as either a hard or soft toggle for any future smoke effects.  
+- Check compatibility with Mk4 Q-Pack and generally review the PCBs for other layout options.  Now I've got my own wiring in, I might see some better positioning for connectors, consider breakout boards, etc.  
+- Consider either including an isolated converter in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.  
+- Reorient the wand board to make the USB port accessible when installed.  At the moment you can't get in there for updates without pulling the Teensy or the whole board.  Neither of those things are fun, and make software updates a pain.  
+- Consider a better menu system, and make **all** configurable settings switchable in software.  That would reduce the need for any trial and error with USB cables attached and would allow for all tweaking of things like switch directions, cyclotron spin directions, etc. possible through the OLED menu.  Could even then distribute just the binaries of the firmware for busters who don't want to go anywhere near an IDE.  
+- I'd like to add USB panel breakouts onto the motherboard and somewhere on the wand for access to the internal devices without needing to take my shell off.  If I can somehow make the SD card accessible as mass storage when connected as well then so much the better.  
 
 ## Hardware
 ### BOM
@@ -96,7 +116,7 @@ Where I can remember it, I've listed the Equipment used and links to purchase be
 3 x [2 Position MTS102 mini toggle switches](https://www.amazon.co.uk/gp/product/B01BWL7Z44/) for wand  
 1 x [Black Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B00TXNXU4S)  
 1 x [Red Off/On SPST Momentary switch](https://www.amazon.co.uk/gp/product/B008ZYE9LY)  
-2 x [EC11 Rotary Encoder with Switch](https://www.ebay.co.uk/sch/i.html?_from=R40&_trksid=p2380057.m570.l1313&_nkw=ec11+rotary+encoder&_sacat=0) for the pack (crank) and wand (top / front knob).  
+2 x [EC11 Rotary Encoder with Switch](https://www.ebay.co.uk/sch/i.html?_from=R40&_trksid=p2380057.m570.l1313&_nkw=ec11+rotary+encoder&_sacat=0) for the pack (crank) and wand (top / front knob).  Lengths will depend on your shells, and where you're placing the encoder.  
   
 Ion switches can be picked up on Etsy.  
   
@@ -107,7 +127,7 @@ You may want to do your own LEDs.  Numbers and type can be varied in the code, t
 1 x [144LEDs/m SK6812 RGBW Strip](https://www.aliexpress.com/item/32476317187.html?spm=a2g0o.order_list.order_list_main.5.74871802yO2AMH).  144 LEDs/m is just enough density to give you 15 LEDs in the Power Cell.  You can get a minimum length if you like.  
 13+ x [SK6812 RGBW Chips](https://www.aliexpress.com/item/1005002509850925.html?spm=a2g0o.order_list.order_list_main.29.74871802yO2AMH) which I use in the wand, pack vent, and for the cyclotron.  Worth getting some spares in case you fry one.  
 1 x [RGBW LED jewel](https://www.aliexpress.com/item/32825068416.html?spm=a2g0o.order_list.order_list_main.56.74871802yO2AMH) for the barrel light  
-1 x [28 Segment Bar Graph](http://www.barmeter.com/download/bl28-3005sda04y.pdf).  Sourcing for this always ends up out of date, so hunt around Aliexpress or try asking on one of the FB groups.  Note that there are two versions of this bargraph, a common anode and common cathode version.  My code is designed for the BL28-3005SDK04Y model (note the A or K in the model name differentiating them).  It can be adapted for the other by simply changing the array mapping in the common header to point to the correct row/column references for your model.  
+1 x [28 Segment Bar Graph](http://www.barmeter.com/download/bl28-3005sda04y.pdf).  Sourcing for this always ends up out of date, so hunt around Aliexpress or try asking on one of the FB groups.  Note that there are two versions of this bargraph, a common anode and common cathode version.  My code is designed for the [BL28-3005SDK04Y](./Images/bargraphwiring.jpg) model (note the A or K in the model name differentiating them).  It can be adapted for the other by simply changing the array mapping in the common header to point to the correct row/column references for your model.  
 
 **Capacitors and Resistors**  
 4 x 4.7K Ohm Resistors for pullups on the Teensy i2c lines  
@@ -133,21 +153,20 @@ Source these where you like depending on how many you need / want for other proj
 ### PCBs
 I have created a couple of PCBs to make installation neater in a Q-Pack.  I've shared the production files in the PCBs folder for use with [JLCPCB](https://jlcpcb.com/).  I used Altium Circuitmaker to create these, so it's hard to share a useful copy of them.  I plan at some point to migrate these to KiCad but that requires time to learn KiCad.  It'll probably happen when I start working on a better belt gizmo :)  
   
-The folder also contains STLs to mount the boards and keep the solder joins clear of the mounting surface.  For the Wand, it is just a spacer - the board is designed to fit along the handle side of the Mk3 Q-Pack, using the external M3 bolt to secure it with a nut internally.  This should position the serial/power connections for the handle exit, but leave enough space for an encoder to run through the top knob if desired.  For the pack, it's a backer designed to have M3x5x4 heat sets (standard size used in Vorons) added to the holes so the board can be attached and removed easily with M3 bolts.  The backer can then be secured in place to the motherboard with VHB tape.  It should be slim enough to fit underneath the booster box of the Mk3 Q-Pack.
+The folder also contains STLs to mount the boards and keep the solder joins clear of the mounting surface.  For the Wand, it is just a spacer - the board is designed to fit along the handle side of the Mk3 Q-Pack, using the external M3 bolt to secure it with a nut internally.  This should position the serial/power connections for the handle exit, but leave enough space for an encoder to run through the top/front knob if desired.  For the pack, it's a backer designed to have M3x5x4 heat sets (standard size used in [Vorons](https://www.vorondesign.com/)) added to the holes so the board can be attached and removed easily with M3 bolts.  The backer can then be secured in place to the motherboard with VHB tape.  It should be slim enough to fit underneath the booster box of the Mk3 Q-Pack.  
+
+Lastly, the current version did not take into account the 3mm inset on the box lid.  I have added an alternative STL for this into the folder, but will refactor the PCBs when I redo them in the future.  My STL for the lid also changes some hole sizes as I'm using M3 + heat inserts to attach to the box, and M4 for metal V-Hook/S-Hook connectors.  
   
-*TBD Supporting Images*
+![](./Images/bothpcbs.jpg)
   
 *Revision 1.0:* Initial release of boards  
 *Revision 1.1:* Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.  
 
 ### Power
-I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V output or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my 12V talentcell battery and avoid noise issues going to the amp.  6W is overspecced (in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence).
-
-### Changelog
-1.0    Initial Release  
+I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V output or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my 12V talentcell battery and avoid noise issues going to the amp.  6W is overspecced - in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence.  They're working [well for me so far](./Images/powerboard.jpg).
 
 ## Useful Models
-I'm slowly going over my library of replacement parts and jigs that I've made over the course of this build and exporting them into the [STLs](./STLs/) folder.  Things like board mounts are generally reusable either with my PCBs or the off-the-shelf boards listed above.  Some bits I've made are very specific to my build so probably not of interest to others.  Have a play with Fusion 360 - you'll both love and hate yourself as a result :)  
+I'm slowly going over my library of replacement parts and jigs that I've made over the course of this build and exporting them into the [STLs](./STLs/) folder (and where appropriate I'll feed some back as PRs for the q-pack).  Things like board mounts are generally reusable either with my PCBs or the off-the-shelf boards listed above.  Some bits I've made are very specific to my build so probably not of interest to others.  Have a play with Fusion 360 - you'll both love and hate yourself as a result, but you'll be too far down the rabbit hole of making to notice :)  
 
 If you see any others I'm using in photos and want to get hold of them, let me know.  
 

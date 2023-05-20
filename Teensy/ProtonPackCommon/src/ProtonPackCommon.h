@@ -27,8 +27,15 @@ const int defaultTrack = 0;
 #define BOOTING_TIME 3000
 #define BOOTING_HUM_START 500
 #define POWERDOWN_TIME 3100
-#define OVERHEAT_TIME 7500
-#define FIRING_WARN_TIME 5000
+// Making these configurable
+#define OVERHEAT_DEFAULT_TIME 5000
+#define OVERHEAT_MIN_TIME 1500
+#define OVERHEAT_MAX_TIME 10000
+#define FIRING_WARN_DEFAULT_TIME 3000
+#define FIRING_WARN_MIN_TIME 1500
+#define FIRING_WARN_MAX_TIME 10000
+int OVERHEAT_TIME = OVERHEAT_DEFAULT_TIME;
+int FIRING_WARN_TIME = FIRING_WARN_DEFAULT_TIME;
 #define FIRING_STOP_TIME 2500
 #define VENT_TIME 3000
 #define VENT_LIGHT_FADE_TIME (VENT_TIME/15)
@@ -67,7 +74,37 @@ enum State { OFF = 'O',
 
 enum ButtonEvent { PRESSED, HELD, RELEASED };
 
-enum displayStates { DISPLAY_OFF, WAITING, TOP_MENU, VOLUME_CHANGE, VOLUME_DISPLAY, TRACK_SELECT, TRACK_DISPLAY, BOOT_LOGO, LOAD_CONFIG, SAVE_CONFIG };
+enum displayStates { DISPLAY_OFF, WAITING, TOP_MENU, VOLUME_CHANGE, VOLUME_DISPLAY, TRACK_SELECT, TRACK_DISPLAY, BOOT_LOGO, LOAD_CONFIG, SAVE_CONFIG, OVERHEAT_TIME_SET, WARNING_TIME_SET };
+
+const int topDisplayItemCount = 6;
+
+const char* topDisplayItems[] = {
+	"Volume",
+	"Track Select",
+	"Overheat Time",
+	"Warning Time",
+	"Save Config",
+	"Load Config"
+};
+
+const displayStates topDisplayNextState[] = {
+	VOLUME_CHANGE,
+	TRACK_SELECT,
+	OVERHEAT_TIME_SET,
+	WARNING_TIME_SET,
+	SAVE_CONFIG,
+	LOAD_CONFIG
+};
+
+int getTopLevelIndex(displayStates theState) {
+	for (int i = 0; i < topDisplayItemCount; i++) {
+		if (topDisplayNextState[i] == theState) {
+			return i;
+		}
+	}
+
+	return 0;
+}
 
 // Hardware Serial Comms 
 // inintialize hardware constants
@@ -88,16 +125,21 @@ enum SerialCommands {
 	eventSetBluetoothMode,
 	eventSetSDTrack,
 	eventPlayPauseSDTrack,
-	eventStopSDTrack,	
+	eventStopSDTrack,
 	eventLoadConfig,
 	eventWriteConfig,
 	eventWandConnect,
 	eventPackConnect,
+	eventSendConfigToWand,
+	eventSendConfigToPack,
+	eventDisplayVolume
 };
 
 #define configFile "config.ini"
 #define configVolume "Volume"
 #define configTrack "TrackNumber"
+#define configOverheat "OverheatTime"
+#define configWarn "WarningTime"
 
 /*  ----------------------
 	Helper Functions
