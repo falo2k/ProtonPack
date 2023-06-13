@@ -3,6 +3,7 @@
 */
 
 #include <ProtonPackCommon.h>
+#include <HardwareConfig.h>
 
 #include <Audio.h>
 #include <Wire.h>

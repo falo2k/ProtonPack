@@ -3,6 +3,7 @@
 */
 
 #include <ProtonPackCommon.h>
+#include <HardwareConfig.h>
 #include <Encoder.h>
 #include <avdweb_Switch.h>
 #include <TimerEvent.h>
@@ -15,43 +16,6 @@
 #include <HT16K33.h>
 
 /*  ----------------------
-	Variables to flip switch directions depending on
-	your wiring implementation
------------------------ */
-// Use this to flip the rotary switch direction in code
-int rotaryDirection = -1;
-const bool SW_ACTIVATE_INVERT = false;
-const bool SW_LOWER_INVERT = false;
-const bool SW_UPPER_INVERT = false;
-
-/*  ----------------------
-	Pin & Range Definitions
-	: Note that for ranges the indexes are inclusive
------------------------ */
-// Switches
-const int SW_ACTIVATE_PIN = A3;
-const int BTN_INTENSIFY_PIN = A2;
-const int SW_LOWER_PIN = A0;
-const int SW_UPPER_PIN = A6;
-const int BTN_TIP_PIN = 2;
-const int ROT_BTN_PIN = 3;
-const int ROT_A_PIN = 5;
-const int ROT_B_PIN = 6;
-
-// LEDS
-const int BARREL_LED_PIN = 22;// A8;
-const int BARREL_LED_COUNT=  7;
-const int TIP_LED_PIN = 23; // A9;
-const int TIP_LED_COUNT = 1;
-const int BODY_LED_PIN = 21; // A7;
-const int BODY_LED_COUNT = 5;
-const int VENT_INDEX = 1;
-const int FRONT_INDEX = 0;
-const int TOP_FORWARD_INDEX = 2;
-const int TOP_BACK_INDEX = 3;
-const int SLO_BLO_INDEX = 4;
-
-/*  ----------------------
 	Library objects
 ----------------------- */
 // Display setup
@@ -61,9 +25,9 @@ unsigned long lastDisplayUpdate = 0;
 bool lastDisplayMove = true;
 
 // Neopixels
-Adafruit_NeoPixel barrelLights = Adafruit_NeoPixel(BARREL_LED_COUNT, BARREL_LED_PIN, NEO_GRBW + NEO_KHZ800);
-Adafruit_NeoPixel tipLights = Adafruit_NeoPixel(TIP_LED_COUNT, TIP_LED_PIN, NEO_GRBW + NEO_KHZ800);
-Adafruit_NeoPixel bodyLights = Adafruit_NeoPixel(BODY_LED_COUNT, BODY_LED_PIN, NEO_GRBW + NEO_KHZ800);
+Adafruit_NeoPixel barrelLights = Adafruit_NeoPixel(BARREL_LED_COUNT, WAND_BARREL_LED_PIN, NEO_GRBW + NEO_KHZ800);
+Adafruit_NeoPixel tipLights = Adafruit_NeoPixel(TIP_LED_COUNT, WAND_TIP_LED_PIN, NEO_GRBW + NEO_KHZ800);
+Adafruit_NeoPixel bodyLights = Adafruit_NeoPixel(BODY_LED_COUNT, WAND_BODY_LED_PIN, NEO_GRBW + NEO_KHZ800);
 
 // Bar graph
 HT16K33 bargraph = HT16K33();
@@ -71,14 +35,14 @@ HT16K33 bargraph = HT16K33();
 // Serial Command Controller - Use hardware serial port
 CmdMessenger cmdMessenger = CmdMessenger(Serial1);
 
-Encoder ROTARY(ROT_A_PIN, ROT_B_PIN);
+Encoder ROTARY(WAND_ROT_A_PIN, WAND_ROT_B_PIN);
 
-Switch actSwitch = Switch(SW_ACTIVATE_PIN);
-Switch intButton = Switch(BTN_INTENSIFY_PIN, INPUT_PULLUP, LOW, 50, 1000);
-Switch lowerSwitch = Switch(SW_LOWER_PIN);
-Switch upperSwitch = Switch(SW_UPPER_PIN);
-Switch tipButton = Switch(BTN_TIP_PIN, INPUT_PULLUP, LOW, 50, 1000);
-Switch encoderButton = Switch(ROT_BTN_PIN);
+Switch actSwitch = Switch(SW_WAND_ACT_PIN);
+Switch intButton = Switch(BTN_WAND_INT_PIN, INPUT_PULLUP, LOW, 50, 1000);
+Switch lowerSwitch = Switch(SW_WAND_LO_PIN);
+Switch upperSwitch = Switch(SW_WAND_UP_PIN);
+Switch tipButton = Switch(BTN_WAND_TIP_PIN, INPUT_PULLUP, LOW, 50, 1000);
+Switch encoderButton = Switch(WAND_ROT_BTN_PIN);
 
 /*  ----------------------
 	Timers
@@ -538,7 +502,7 @@ void updateInputs(unsigned long currentMillis) {
 	// Handle Rotary Encoder Movements
 	int newRotaryPosition = ROTARY.read();
 	if (abs(newRotaryPosition - lastRotaryPosition) >= 4) {
-		int movement = rotaryDirection * round(0.25 * (newRotaryPosition - lastRotaryPosition));		
+		int movement = rotaryDirectionWand * round(0.25 * (newRotaryPosition - lastRotaryPosition));		
 		lastRotaryPosition = newRotaryPosition;
 
 		DEBUG_SERIAL.print("Rotary Movement: "); DEBUG_SERIAL.println(movement);
@@ -548,11 +512,11 @@ void updateInputs(unsigned long currentMillis) {
 }
 
 void actSwitchToggle(void* ref) {
-	DEBUG_SERIAL.print("ACT Switch: "); DEBUG_SERIAL.println(actSwitch.on() ^ SW_ACTIVATE_INVERT);
+	DEBUG_SERIAL.print("ACT Switch: "); DEBUG_SERIAL.println(actSwitch.on() ^ SW_WAND_ACT_INVERT);
 
-	if (actSwitch.on() ^ SW_ACTIVATE_INVERT) {
+	if (actSwitch.on() ^ SW_WAND_ACT_INVERT) {
 		// Whether we're going into GB mode or Music mode
-		if (upperSwitch.on() ^ SW_UPPER_INVERT) {
+		if (upperSwitch.on() ^ SW_WAND_UP_INVERT) {
 			initialiseState(MUSIC_MODE, millis());
 		}
 		else {
@@ -570,9 +534,9 @@ void actSwitchToggle(void* ref) {
 }
 
 void lowerSwitchToggle(void* ref) {
-	DEBUG_SERIAL.print("LOWER Switch: "); DEBUG_SERIAL.println(lowerSwitch.on() ^ SW_LOWER_INVERT);
+	DEBUG_SERIAL.print("LOWER Switch: "); DEBUG_SERIAL.println(lowerSwitch.on() ^ SW_WAND_LO_INVERT);
 
-	if (lowerSwitch.on() ^ SW_LOWER_INVERT) {
+	if (lowerSwitch.on() ^ SW_WAND_LO_INVERT) {
 		overheatMode = true;
 		bluetoothMode = true;
 	}
@@ -587,11 +551,11 @@ void lowerSwitchToggle(void* ref) {
 }
 
 void upperSwitchToggle(void* ref) {
-	DEBUG_SERIAL.print("UPPER Switch: "); DEBUG_SERIAL.println(upperSwitch.on() ^ SW_UPPER_INVERT);
+	DEBUG_SERIAL.print("UPPER Switch: "); DEBUG_SERIAL.println(upperSwitch.on() ^ SW_WAND_UP_INVERT);
 
 	// Only do something if the pack is on, otherwise it doesn't matter what mode we're in
-	if (actSwitch.on() ^ SW_ACTIVATE_INVERT) {
-		if (upperSwitch.on() ^ SW_UPPER_INVERT) {
+	if (actSwitch.on() ^ SW_WAND_ACT_INVERT) {
+		if (upperSwitch.on() ^ SW_WAND_UP_INVERT) {
 			switch (state) {
 				case MUSIC_MODE:
 					// Do nothing.  We're already in MUSIC MODE ...
@@ -929,8 +893,8 @@ void rotaryMove(unsigned long currentMillis, int movement) {
 	State Management
 ----------------------- */
 void setStartupState(unsigned long currentMillis) {
-	if (actSwitch.on() ^ SW_ACTIVATE_INVERT) {
-		if (upperSwitch.on() ^ SW_UPPER_INVERT) {
+	if (actSwitch.on() ^ SW_WAND_ACT_INVERT) {
+		if (upperSwitch.on() ^ SW_WAND_UP_INVERT) {
 			initialiseState(MUSIC_MODE, currentMillis);
 		}
 		else {
@@ -941,7 +905,7 @@ void setStartupState(unsigned long currentMillis) {
 		initialiseState(OFF, currentMillis);
 	}
 
-	if (lowerSwitch.on() ^ SW_LOWER_INVERT) {
+	if (lowerSwitch.on() ^ SW_WAND_LO_INVERT) {
 		overheatMode = true;
 		bluetoothMode = true;
 	}

@@ -20,5 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <!-- <ClInclude Include="$(MSBuildThisFileDirectory)ProtonPackCommon.h" /> -->
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\HardwareConfig.h" />
   </ItemGroup>
 </Project>
