@@ -75,23 +75,22 @@ The light colours I've used in my code were chosen to work with the lenses and p
 - Cyclotron lenses are just frosted acrylic so I can do any colour.  They are mounted over printed reflectors lined with a red chrome vinyl layer to give them a red tint when off.  
 - For the wand LED covers the slo blo is red, tip hat is orange, front shelf is opaque white, top front is clear, and top rear is orange.  
 
-## Music Tracks
-I've removed the music tracks from this repository, but you can see which ones I had loaded in [ProtonPackCommon.h](./Teensy/ProtonPackCommon/src/ProtonPackCommon.h).  You can replace these with your own copies, or adapt the header file to manage your own.  I used 16 bit 44.1khz wave files downmixed to mono as I only have a single speaker setup in the pack.  I believe the audio board does support MP3 with some overhead, but there's so much space on a SD card that I didn't care.  Audacity was used for file processing because it's great.  
-  
-If you want to add more music tracks to the pack, bearing in mind that it might take a while to change them given the simple scrolling menu, then you can update the arrays in ProtonPackCommon.h to reference them.  Make sure to update the track count as well.  
-  
 ### Future Plans
 - General code refactoring where I've got a few inconsistent approaches.  Tidy up method signatures a bit to be consistent with ordering of arguments, remove TimerEvent as I've ended up with some custom implementations of the same principle so should be consistent.  
 - Some pin headers in the pack are already spare to support adding a smoke machine to the pack at a later date for venting (marked as IO2 on the PCB).  This should be easy to add triggers in software at the appropriate state changes.  I've seen some interesting looking i2c relay boards or i2c IO expanders out there as alternative options if I want more granular control over pump, smoke, fan for the effects.  
 - Alternative lighting schemes, sounds, animations, etc. can be added relatively easily.  Switching would probably be done with additional menu items through the OLED controls.  
 - I'll play with adding more granular volume control, again through the menu, to individually tweak the volume of SFX, Music, and Bluetooth channels.  This may turn out to be unnnecessary given the sounds should already be balanced and bluetooth volume should be handled by the device sending audio.  
 - The Ion Switch input currently doesn't do anything.  I may use this as either a hard or soft toggle for any future smoke effects.  
-- Check compatibility with Mk4 Q-Pack and generally review the PCBs for other layout options.  Now I've got my own wiring in, I might see some better positioning for connectors, consider breakout boards, etc.  
-- Consider either including an isolated converter in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.  
-- Reorient the wand board to make the USB port accessible when installed.  At the moment you can't get in there for updates without pulling the Teensy or the whole board.  Neither of those things are fun, and make software updates a pain.  
+- Review the PCBs for other layout options.  Now I've got my own wiring in, I might see some better positioning for connectors, consider breakout boards, etc.  
+- Consider either including an isolated converter in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.
 - Consider a better menu system, and make **all** configurable settings switchable in software.  That would reduce the need for any trial and error with USB cables attached and would allow for all tweaking of things like switch directions, cyclotron spin directions, etc. possible through the OLED menu.  Could even then distribute just the binaries of the firmware for busters who don't want to go anywhere near an IDE.  
-- I'd like to add USB panel breakouts onto the motherboard and somewhere on the wand for access to the internal devices without needing to take my shell off.  If I can somehow make the SD card accessible as mass storage when connected as well then so much the better.  
+- I'd like to add USB panel breakouts onto the motherboard and somewhere on the wand for access to the internal devices without needing to take my shell off.  If I can somehow make the SD card accessible as mass storage when connected as well then so much the better. 
 
+## Music Tracks
+I've removed the music tracks from this repository, but you can see which ones I had loaded in [ProtonPackCommon.h](./Teensy/ProtonPackCommon/src/ProtonPackCommon.h).  You can replace these with your own copies, or adapt the header file to manage your own.  I used 16 bit 44.1khz wave files downmixed to mono as I only have a single speaker setup in the pack.  I believe the audio board does support MP3 with some overhead, but there's so much space on a SD card that I didn't care.  Audacity was used for file processing because it's great.  
+  
+If you want to add more music tracks to the pack, bearing in mind that it might take a while to change them given the simple scrolling menu, then you can update the arrays in ProtonPackCommon.h to reference them.  Make sure to update the track count as well.  
+  
 ## Hardware
 ### BOM
 Where I can remember it, I've listed the Equipment used and links to purchase below.  You may find other sources are better for availability (Mouser, Digikey, etc.).  As with all of these types of projects, it depends exactly how you're planning to mount your electronics, so I'd advise thinking about your layout before purchasing.  I'm assuming I don't need to go into tools and wire here, that should be a given.  A decent soldering iron is a must, and I have to say how much I'm loving my [Pinecil](https://www.pine64.org/pinecil/), and also the best helping hands I've ever used, the [Omnifixo](https://omnifixo.com/en-gb).  
