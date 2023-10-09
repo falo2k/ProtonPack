@@ -85,6 +85,7 @@ The light colours I've used in my code were chosen to work with the lenses and p
 - Consider either including an isolated converter in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.
 - Consider a better menu system, and make **all** configurable settings switchable in software.  That would reduce the need for any trial and error with USB cables attached and would allow for all tweaking of things like switch directions, cyclotron spin directions, etc. possible through the OLED menu.  Could even then distribute just the binaries of the firmware for busters who don't want to go anywhere near an IDE.  
 - I'd like to add USB panel breakouts onto the motherboard and somewhere on the wand for access to the internal devices without needing to take my shell off.  If I can somehow make the SD card accessible as mass storage when connected as well then so much the better. 
+- The Teensy LC is no longer being manufactured - at some point I will update the Wand Board to support the Teensy 4.0 (should be some pin re-routing at most and pogo repositioning).  For now I still have a few LCs spare so am in no hurry to change it.  
 
 ## Music Tracks
 I've removed the music tracks from this repository, but you can see which ones I had loaded in [ProtonPackCommon.h](./Teensy/ProtonPackCommon/src/ProtonPackCommon.h).  You can replace these with your own copies, or adapt the header file to manage your own.  I used 16 bit 44.1khz wave files downmixed to mono as I only have a single speaker setup in the pack.  I believe the audio board does support MP3 with some overhead, but there's so much space on a SD card that I didn't care.  Audacity was used for file processing because it's great.  
@@ -160,6 +161,7 @@ Lastly, the current version did not take into account the 3mm inset on the box l
   
 *Revision 1.0:* Initial release of boards  
 *Revision 1.1:* Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.  
+*Revision 2.0:* Wand board updated to better fit in stock Q-Pack wand shell.  Added additional headers to board for USB data breakout (via pogo pins) and for connecting a hall effect sensor for barrel state sensing.  Generally re-jigged the layout, with the priority being having the teensy USB port facing upwards for update access with the wand baseplate removed.
 
 ### Power
 I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V output or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my 12V talentcell battery and avoid noise issues going to the amp.  6W is overspecced - in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence.  They're working [well for me so far](./Images/powerboard.jpg).
