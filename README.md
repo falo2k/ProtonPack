@@ -11,8 +11,8 @@ It is designed to fit inside the 3D printed pack available [here - the Q-Pack](h
 
 ## Software
 The code is set up as a VS solution/project set using [Visual Micro](https://www.visualmicro.com/), but you can tweak this to your preferred environment.  There are three core files:
-- Wand.ino for the Wand sketch on the Teensy LC
-- Pack.ino for the Pack sketch on the Teensy 4.0
+- Wand.ino for the Wand sketch
+- Pack.ino for the Pack sketch
 - ProtonPackCommon.h which is used by both for some shared enums, timers, etc.
   
 The Wand sketch does all state management, and will update the Pack sketch as necessary over serial.  If you want to tweak speeds, animations, direction of switches, etc. then you should find the right data to change either above the setup() functions in each file, or within the common header.
@@ -85,7 +85,6 @@ The light colours I've used in my code were chosen to work with the lenses and p
 - Consider either including an isolated converter in the BOM and as part of existing PCBs, or a breakout depending on power requirements for the smoke system.
 - Consider a better menu system, and make **all** configurable settings switchable in software.  That would reduce the need for any trial and error with USB cables attached and would allow for all tweaking of things like switch directions, cyclotron spin directions, etc. possible through the OLED menu.  Could even then distribute just the binaries of the firmware for busters who don't want to go anywhere near an IDE.  
 - I'd like to add USB panel breakouts onto the motherboard and somewhere on the wand for access to the internal devices without needing to take my shell off.  If I can somehow make the SD card accessible as mass storage when connected as well then so much the better. 
-- The Teensy LC is no longer being manufactured - at some point I will update the Wand Board to support the Teensy 4.0 (should be some pin re-routing at most and pogo repositioning).  For now I still have a few LCs spare so am in no hurry to change it.  
 
 ## Music Tracks
 I've removed the music tracks from this repository, but you can see which ones I had loaded in [ProtonPackCommon.h](./Teensy/ProtonPackCommon/src/ProtonPackCommon.h).  You can replace these with your own copies, or adapt the header file to manage your own.  I used 16 bit 44.1khz wave files downmixed to mono as I only have a single speaker setup in the pack.  I believe the audio board does support MP3 with some overhead, but there's so much space on a SD card that I didn't care.  Audacity was used for file processing because it's great.  
@@ -97,8 +96,7 @@ If you want to add more music tracks to the pack, bearing in mind that it might 
 Where I can remember it, I've listed the Equipment used and links to purchase below.  You may find other sources are better for availability (Mouser, Digikey, etc.).  As with all of these types of projects, it depends exactly how you're planning to mount your electronics, so I'd advise thinking about your layout before purchasing.  I'm assuming I don't need to go into tools and wire here, that should be a given.  A decent soldering iron is a must, and I have to say how much I'm loving my [Pinecil](https://www.pine64.org/pinecil/), and also the best helping hands I've ever used, the [Omnifixo](https://omnifixo.com/en-gb).  
 
 **Controllers**  
- 1 x [Teensy LC](https://www.pjrc.com/store/teensylc.html).  Would be fine using a Teensy 4.0 here as well if availability is a challenge  
- 1 x [Teensy 4.0](https://www.pjrc.com/store/teensy40.html)  
+ 2 x [Teensy 4.0](https://www.pjrc.com/store/teensy40.html)  
  1 x [Teensy Audio Board Rev D](https://www.pjrc.com/store/teensy3_audio.html)  
  1 x [Teensy Stacking Header Kit](https://www.adafruit.com/product/3883).  For the audio board to stack on the Teensy 4.0.  This was the easiest source of 14 pin stackable headers I could find.  If not using PCBs then you may just stick with non-stacking headers here.  
  4 x [14x1R Pins](https://www.pjrc.com/store/header_14x1.html) for the Teensy boards  
@@ -151,17 +149,19 @@ Source these where you like depending on how many you need / want for other proj
 1 x [M6 Thumb Nut](https://www.aliexpress.com/item/1005003320281166.html) for the top knob on the wand.  I drilled out a 2.5 mm hole in the side, tapped it for M3 and used a grub screw to attach it to an encoder.  The top is capped with a cut-off and glued countersunk bolt head.
 
 ### PCBs
-I have created a couple of PCBs to make installation neater in a Q-Pack.  I've shared the production files in the PCBs folder for use with [JLCPCB](https://jlcpcb.com/).  I used Altium Circuitmaker to create these, so it's hard to share a useful copy of them.  I plan at some point to migrate these to KiCad but that requires time to learn KiCad.  It'll probably happen when I start working on a better belt gizmo :)  
+I have created a couple of PCBs to make installation neater in a Q-Pack.  I've shared the production files in the PCBs folder for use with [JLCPCB](https://jlcpcb.com/) - note that they have a placeholder JLCJLCJLCJLC text on the rear silkscreen so you can use the "Specify a location" option in JLC for order numbering.  I used Altium Circuitmaker to create these, so it's hard to share a useful copy of them.  I plan at some point to migrate these to KiCad but that requires time to learn KiCad.  It'll probably happen when I start working on a better belt gizmo :)  
   
 The folder also contains STLs to mount the boards and keep the solder joins clear of the mounting surface.  For the Wand, it is just a spacer - the board is designed to fit along the handle side of the Mk3 Q-Pack, using the external M3 bolt to secure it with a nut internally.  This should position the serial/power connections for the handle exit, but leave enough space for an encoder to run through the top/front knob if desired.  For the pack, it's a backer designed to have M3x5x4 heat sets (standard size used in [Vorons](https://www.vorondesign.com/)) added to the holes so the board can be attached and removed easily with M3 bolts.  The backer can then be secured in place to the motherboard with VHB tape.  It should be slim enough to fit underneath the booster box of the Mk3 Q-Pack.  
 
 Lastly, the current version did not take into account the 3mm inset on the box lid.  I have added an alternative STL for this into the folder, but will refactor the PCBs when I redo them in the future.  My STL for the lid also changes some hole sizes as I'm using M3 + heat inserts to attach to the box, and M4 for metal V-Hook/S-Hook connectors.  
-  
+
+Note that the wand board already contains the components necessary for motor switching (transistor, diode, etc.), whereas the pack board offers simple HI/LO pin output for bluetooth and vent switching (with reference voltage).  This is to make it agnostic to how you want to do your switching for devices not directly powered by the Teensy.  If you don't want to build your own circuits, there are some good pre-packaged boards out there for relay switching or transistor switching.  DFRobot or Adafruit are good places to look.  
+
 ![](./Images/bothpcbs.jpg)
-  
+
 *Revision 1.0:* Initial release of boards  
 *Revision 1.1:* Pack board updated to move Audio Board output pin.  I made a mis-reading of the schematic, and only the pins nearest the Teensy pins are connected to L/R out.  Temporarily solder bridged on my v1.0 boards.  
-*Revision 2.0:* Wand board updated to better fit in stock Q-Pack wand shell.  Added additional headers to board for USB data breakout (via pogo pins) and for connecting a hall effect sensor for barrel state sensing.  Generally re-jigged the layout, with the priority being having the teensy USB port facing upwards for update access with the wand baseplate removed.
+*Revision 2.0:* Wand board migrated to KiCad and updated to better fit in stock Q-Pack wand shell.  Updated the PCB to support the Teensy 4.0 as the LC is now EOL.  Added additional headers to board for USB data breakout (via pogo pins), for connecting a hall effect sensor for barrel state sensing, and for controlling a rumble motor (5V).  Generally re-jigged the layout, with the priority being having the teensy USB port facing upwards for access with the wand baseplate removed.
 
 ### Power
 I've left supplying the 5V power to the boards to the individual user.  You can take a feed directly from a Talentcell 5V output or use a common buck converter, but either of these may introduce some noise into the audio.  Your mileage with this may vary.  I got myself some [isolated dc-dc converters](https://www.digikey.co.uk/en/products/detail/mornsun-america-llc/VRB1205S-6WR3/16348304) to step down my 12V talentcell battery and avoid noise issues going to the amp.  6W is overspecced - in my testing, the setup draws at most 0.6A at its busiest time when in the overheat warning sequence.  They're working [well for me so far](./Images/powerboard.jpg).
