@@ -1,0 +1,9 @@
+TimerEvent	KEYWORD1
+set	KEYWORD2
+reset	KEYWORD2
+enable	KEYWORD2
+disable	KEYWORD2
+update	KEYWORD2
+setPeriod	KEYWORD2
+isEnabled	KEYWORD2
+
