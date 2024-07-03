@@ -1,12 +1,12 @@
-%TF.GenerationSoftware,KiCad,Pcbnew,7.0.7*%
-%TF.CreationDate,2023-12-19T14:51:20+00:00*%
-%TF.ProjectId,Wand Board,57616e64-2042-46f6-9172-642e6b696361,rev?*%
+%TF.GenerationSoftware,KiCad,Pcbnew,8.0.3*%
+%TF.CreationDate,2024-07-03T22:45:41+01:00*%
+%TF.ProjectId,Wand Board ESP32,57616e64-2042-46f6-9172-642045535033,rev?*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Paste,Bot*%
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW 7.0.7) date 2023-12-19 14:51:20*
+G04 Created by KiCad (PCBNEW 8.0.3) date 2024-07-03 22:45:41*
 %MOMM*%
 %LPD*%
 G01*
