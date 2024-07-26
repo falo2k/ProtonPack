@@ -1,4 +1,4 @@
-(footprint "JST_XH_B3B-XH-A_1x03_NeoPixelHeader"
+(footprint "JST_XH_B3B-XH-A_1x03_MosRelay"
 	(version 20240108)
 	(generator "pcbnew")
 	(generator_version "8.0")
@@ -405,7 +405,7 @@
 		(layer "F.Fab")
 		(uuid "d305cc8b-7847-4031-9b68-2ed425f7d83b")
 	)
-	(fp_text user "Di"
+	(fp_text user "Sig"
 		(at 5.08 -3 0)
 		(unlocked yes)
 		(layer "F.SilkS")

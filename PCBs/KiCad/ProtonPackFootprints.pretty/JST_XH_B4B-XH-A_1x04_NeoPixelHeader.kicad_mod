@@ -8,6 +8,7 @@
 	(property "Reference" "REF**"
 		(at 4.445 1.905 0)
 		(layer "F.SilkS")
+		(hide yes)
 		(uuid "636b7fff-32d1-4f72-801a-de96e87ee853")
 		(effects
 			(font
@@ -407,7 +408,7 @@
 		(layer "F.Fab")
 		(uuid "8f5e720e-b6f4-471e-a171-8e4a59f77dc9")
 	)
-	(fp_text user "D"
+	(fp_text user "Di"
 		(at 5.08 -3.175 0)
 		(unlocked yes)
 		(layer "F.SilkS")
@@ -421,7 +422,7 @@
 			(justify bottom)
 		)
 	)
-	(fp_text user "O"
+	(fp_text user "Do"
 		(at 7.62 -3.175 0)
 		(unlocked yes)
 		(layer "F.SilkS")
@@ -466,6 +467,7 @@
 	(fp_text user "${REFERENCE}"
 		(at 3.75 2.7 0)
 		(layer "F.Fab")
+		(hide yes)
 		(uuid "208c7bbc-45da-4418-bb09-f6a2bfe38dd9")
 		(effects
 			(font

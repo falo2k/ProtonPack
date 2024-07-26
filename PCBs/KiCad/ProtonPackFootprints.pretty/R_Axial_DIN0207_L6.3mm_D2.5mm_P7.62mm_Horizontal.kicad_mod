@@ -20,6 +20,7 @@
 	(property "Value" "R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal"
 		(at 3.81 2.37 0)
 		(layer "F.Fab")
+		(hide yes)
 		(uuid "0fe5d38b-8d46-4435-9118-3c24556c0c11")
 		(effects
 			(font
@@ -230,13 +231,13 @@
 	)
 	(fp_text user "${VALUE}"
 		(at 3.81 0.635 0)
-		(unlocked yes)
 		(layer "F.SilkS")
 		(uuid "3b6b88d0-a181-4202-b9a5-2da6ab1dc311")
 		(effects
 			(font
 				(size 1 1)
-				(thickness 0.1)
+				(thickness 0.2)
+				(bold yes)
 			)
 			(justify bottom)
 		)
@@ -244,6 +245,7 @@
 	(fp_text user "${REFERENCE}"
 		(at 3.81 0 0)
 		(layer "F.Fab")
+		(hide yes)
 		(uuid "b881bdff-47f9-4fb2-82fe-973b7d6b31ba")
 		(effects
 			(font

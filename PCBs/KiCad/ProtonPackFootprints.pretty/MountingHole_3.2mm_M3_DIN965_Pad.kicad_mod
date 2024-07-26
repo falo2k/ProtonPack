@@ -1,0 +1,114 @@
+(footprint "MountingHole_3.2mm_M3_DIN965_Pad"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(locked yes)
+	(layer "F.Cu")
+	(descr "Mounting Hole 3.2mm, M3, DIN965")
+	(tags "mounting hole 3.2mm m3 din965")
+	(property "Reference" "REF**"
+		(at 0 -3.8 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "3a4338b2-52a7-4a87-a437-443aefcbaa4c")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "MountingHole_3.2mm_M3_DIN965_Pad"
+		(at 0 3.8 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "e44ae144-afd3-46e0-a8b5-7be4ed8c73e9")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" "MountingHole:MountingHole_3.2mm_M3_DIN965_Pad"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "f7a1a135-551d-427b-83a0-c9fcc321395a")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "42968478-e883-42dd-b657-9bf6da4e6fd6")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "5428183a-3ca1-4855-bd23-cc3680824b56")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr exclude_from_pos_files exclude_from_bom)
+	(fp_circle
+		(center 0 0)
+		(end 2.8 0)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill none)
+		(layer "Cmts.User")
+		(uuid "694f3761-9bff-4adc-bd23-dfa82ee0117d")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 3.05 0)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.CrtYd")
+		(uuid "f1644758-94d4-4d1b-9a77-cbd18ac871a9")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "bea6e5c1-00a2-46ba-b041-693bb650fe92")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole circle
+		(at 0 0)
+		(size 5.6 5.6)
+		(drill 3.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "0d0425b5-e327-45fd-8f7d-1e2c905239ee")
+	)
+)
