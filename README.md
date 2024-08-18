@@ -157,6 +157,8 @@ Lastly, the current version did not take into account the 3mm inset on the box l
 
 Note that the wand board already contains the components necessary for motor switching (transistor, diode, etc.), whereas the pack board offers simple HI/LO pin output for bluetooth and vent switching (with reference voltage).  This is to make it agnostic to how you want to do your switching for devices not directly powered by the Teensy.  If you don't want to build your own circuits, there are some good pre-packaged boards out there for relay switching or transistor switching.  DFRobot or Adafruit are good places to look.  
 
+Note: Jigs - space for through hole components, but I wouldn't rely on them, or do them on a second pass.  They're often easier to do after the sockets, just bending the legs before soldering.  Jig accuracy will depend on how well tuned your printer is for dimensions, corners, etc. so some cleanup with a knife may be required if you wish to use them.  I find they fit snug (post any shrinkage) printing ABS on a Voron.
+
 ![](./Images/bothpcbs.jpg)
 
 *Revision 1.0:* Initial release of boards  
